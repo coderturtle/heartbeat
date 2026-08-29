@@ -8,6 +8,8 @@ What has to survive a crash, and what happens if it doesn't?
 
 Fifth module. Prerequisite: [Module 04](../04-raft-log-replication/README.md) - the persisted state is exactly the log/term/vote data Module 04 already produces; persistence has nothing to save until replication exists. Next: [Module 06, Raft: Log Compaction & Snapshots](../06-raft-log-compaction-snapshots/README.md) - the hinge is that compaction discards persisted state, so the thing being discarded has to be reliably saved first. See [`modules/README.md`](../README.md) for the full arc and why this order.
 
+**Still not `Checkout`-specific.** What's persisted here (currentTerm, votedFor, log) is Raft's own state, not `Checkout`'s leases - once Module 07 wraps `Checkout` in this engine, a lease's durability rides entirely on this module's correctness, without this module needing to know that.
+
 ## Learning objectives (placeholder - finalized when content is authored)
 
 - Identify the minimal correct set of state Raft must persist before responding to an RPC (Figure 2's persistent-state fields: currentTerm, votedFor, log).

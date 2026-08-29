@@ -8,6 +8,8 @@ How does a cluster agree on exactly one leader, even when the network actively w
 
 Third module. Prerequisite: [Module 01](../01-rpc-over-unreliable-network/README.md) (RPCs) - Raft's leader election is built entirely on RequestVote/AppendEntries RPCs over the harness Module 01 produced. Next: [Module 04, Raft: Log Replication](../04-raft-log-replication/README.md) - the hinge is that there's nothing to replicate until a leader exists. See [`modules/README.md`](../README.md) for the full arc and why this order.
 
+**Not `Checkout`-specific, deliberately.** This module (and 04-06) build the generic Raft engine `Checkout` will run on starting Module 07 - leader election doesn't know or care that it'll eventually carry lease-and-holder state. See [`modules/README.md`](../README.md)'s "One shared project" section for why this arc is honestly uneven rather than adding a `Checkout` feature every module.
+
 ## Learning objectives (placeholder - finalized when content is authored)
 
 - Implement Raft's leader-election state machine (Follower/Candidate/Leader) per the Raft paper's Figure 2 (state summary) and Figure 4 (the transition diagram).

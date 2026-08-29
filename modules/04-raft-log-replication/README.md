@@ -8,6 +8,8 @@ How does a leader get every follower's log to match its own, even a follower tha
 
 Fourth module. Prerequisite: [Module 03](../03-raft-leader-election/README.md) - a leader must exist before it can replicate a log to anyone. Next: [Module 05, Raft: Persistence](../05-raft-persistence/README.md) - the hinge is that persistence exists specifically to survive a crash mid-replication, so replication has to work before persisting it is meaningful. See [`modules/README.md`](../README.md) for the full arc and why this order.
 
+**Still not `Checkout`-specific.** The log entries replicated here are opaque as far as this module is concerned - in Module 07 they'll carry `Checkout`'s own checkout/renew/return operations, but this module's log-matching property has to hold regardless of what the entries mean.
+
 ## Learning objectives (placeholder - finalized when content is authored)
 
 - Implement AppendEntries-based log replication, including the consistency check that lets a leader detect where a follower's log diverges.
