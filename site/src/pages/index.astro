@@ -1,0 +1,146 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../components/layout/BaseLayout.astro";
+
+const REPO = "https://github.com/coderturtle/heartbeat";
+const base = import.meta.env.BASE_URL;
+
+const recentEntries = (await getCollection("buildlog", ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3);
+---
+
+<BaseLayout
+  title="Heartbeat: guide"
+  description="Build Raft from scratch in Rust, with your own coding agent, and let a simulated, adversarial network, not an opinion, be the first gate."
+>
+  <h1 class="text-3xl font-bold">Heartbeat</h1>
+  <p class="mt-2 text-lg opacity-80">
+    Let a simulated, adversarial network, not an opinion, be the first gate.
+  </p>
+
+  <div class="post-body mt-10">
+    <p>
+      This page is the guide for anyone landing on the deployed site rather than the repo
+      directly. The workshop itself, nine modules covering RPC through sharding plus a synthesis
+      capstone, lives in the <a href={REPO}>repo</a>, whose own README covers the same ground in
+      more detail once you've cloned it. Nothing here substitutes for cloning it; this is
+      orientation, not the content.
+    </p>
+
+    <h2>Why a network, not a compiler, is the gate here</h2>
+    <p>
+      A correct-looking Raft implementation can pass every unit test and still lose committed
+      data the first time a network partition heals badly. Heartbeat's premise is that the fix
+      isn't more reading, it's a gate that can actually see network faults, not just type errors.
+      Every exercise runs through your own coding-agent harness (Claude Code, Codex, or
+      equivalent) against <a href="https://docs.rs/turmoil">turmoil</a>, a simulator that drops,
+      delays, reorders, and partitions traffic on command, across a published set of seeds, not
+      just one. A single arbitrary seed can get lucky in a way a compiler error never can, which
+      is why the deterministic tier here means green across the whole seed set, not green once.
+    </p>
+
+    <h2>Two gates, not one</h2>
+    <p>
+      First, the <strong>deterministic gate</strong>: your implementation runs against a fixed,
+      published set of <code>turmoil</code> seeds, no judgment call. Second, a{" "}
+      <strong>conceptual gate</strong>: Coachgremlin, this workshop's teaching agent (a role you
+      run yourself, inside your own harness, not a hosted service), checks whether you can explain
+      <em>why</em> your implementation is safe, not just that it happened to survive every seed
+      tried so far. A green deterministic tier is necessary, never sufficient on its own: this
+      subject has more genuine open risk than most, since a broken implementation can pass a test
+      by luck.
+    </p>
+
+    <h2>MIT 6.5840 already exists. This isn't a replacement for it.</h2>
+    <p>
+      MIT's 6.5840 ("Distributed Systems," formerly 6.824) is the field's dominant free teaching
+      resource, and the reason this workshop didn't have to invent a lab sequence from scratch.
+      Heartbeat's arc follows 6.5840's own real lab order: RPC, then a single-node KV service
+      built <em>before</em> Raft exists (not after, the more obvious-sounding order this
+      workshop's own research initially got wrong), then Raft itself in its four real parts,
+      then a fault-tolerant KV service wrapping that Raft, then sharding. What Heartbeat adds is a
+      Rust implementation, agent-native delivery, a deterministic-plus-conceptual gate instead of
+      a bare pass/fail, and a keepable takeaway per module. See the repo's{" "}
+      <code>docs/workshop-design.md</code> for the full curriculum-anchor research, including that
+      correction.
+    </p>
+
+    <h2>What you walk away with</h2>
+    <p>
+      Two different things get built during each module: your own judgment, and a reusable
+      artifact your agent can load next time. See each module's own README (once authored) for
+      the evidence behind its specific gate.
+    </p>
+    <ul>
+      <li>
+        <strong>You</strong> get practiced judgment: diagnosing a failing seed instead of just
+        rerunning it, reasoning about what a crash mid-replication actually has to survive, and
+        telling apart a harness bug from a Raft bug.
+      </li>
+      <li>
+        <strong>Your agent</strong> gets the packaged takeaways: a network-fault-injection harness
+        template, an API-design checklist, a leader-election diagnostic playbook, a log-matching
+        checklist, a crash-survival checklist, a snapshot-boundary decision guide, a layering
+        playbook, a shard-ownership checklist, and a personal distributed-systems diagnostic
+        playbook tying it all together.
+      </li>
+    </ul>
+
+    <h2>The runbook</h2>
+    <ol>
+      <li>
+        Prerequisites: comfortable with git, the CLI, and reading a diff; fluent in Rust
+        (ownership, borrowing, traits, <code>async</code>/await, the level <code>borrow-native</code>{" "}
+        teaches to); already using a coding-agent harness regularly; Rust and <code>cargo</code>{" "}
+        installed.
+      </li>
+      <li>
+        Clone it: <code>git clone {REPO}.git</code>
+      </li>
+      <li>
+        Start at <code>modules/README.md</code>. It has the full arc, in order, and a table of
+        what each module's gate requires and what you keep from it.
+      </li>
+      <li>
+        Work through the nine modules in order: RPC, a single-node KV service, the four parts of
+        Raft, a fault-tolerant KV service on Raft, sharding, then the synthesis capstone. Each
+        states a hard prerequisite on an earlier one.
+      </li>
+      <li>
+        No module completes by reading it. Every module states a required gate, checked first
+        mechanically against a real, adversarial simulated network, then conceptually. If a
+        module ever reduces to "read this, then move on," or a link here is broken, that's a
+        defect: <a href={`${REPO}/issues`}>open an issue</a>.
+      </li>
+    </ol>
+
+    <h2>Current status</h2>
+    <p>
+      All nine modules are skeleton only: a decided question, arc position, gate shape (including
+      a named fault scenario), and takeaway shape, but no authored exercise yet. That's real work
+      still ahead, not a formality. Watch the build log below for progress.
+    </p>
+  </div>
+
+  {
+    recentEntries.length > 0 && (
+      <>
+        <h2 class="mt-14 text-xl font-semibold">Recent from the build log</h2>
+        <ul class="mt-6 space-y-4">
+          {recentEntries.map((entry) => (
+            <li>
+              <a href={`${base}build-log/${entry.id}/`} class="entry-card">
+                <p class="entry-title text-lg font-semibold">{entry.data.title}</p>
+                <p class="mt-1 text-sm opacity-80">{entry.data.description}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-6 text-sm opacity-70">
+          See the <a href={`${base}build-log/`} class="underline">full index</a>.
+        </p>
+      </>
+    )
+  }
+</BaseLayout>
