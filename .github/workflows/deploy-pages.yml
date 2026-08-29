@@ -1,0 +1,67 @@
+name: Deploy build log to GitHub Pages
+
+# Human Gate (per docs/next-actions.md and the Workshop Gremlin's own policy):
+# first Pages deploy is a human-confirmed action, not automatic. This workflow is
+# defined but NOT wired to run on push yet - only workflow_dispatch, so merging
+# this scaffold to main cannot itself trigger a live deploy. Once a human enables
+# GitHub Pages in repo settings and runs workflow_dispatch once to confirm the
+# site is ready to be public, add a `push: branches: [main]` trigger scoped to
+# site/**, docs/build-log/**, and this file (see borrow-native's
+# .github/workflows/deploy-pages.yml for the post-Human-Gate shape).
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: site
+
+      - name: Build site
+        run: npm run build
+        working-directory: site
+
+      # No custom domain yet (that's a later, human-gated decision, same as
+      # borrow-native's own CNAME PR came after its initial scaffold). Pages
+      # enablement itself is also a one-time, human-run step (GITHUB_TOKEN
+      # cannot enable Pages - see agentic-infra-lab's interpreter-notes.md),
+      # not something this workflow does.
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
