@@ -29,7 +29,7 @@ cat modules/README.md
 
 Then work through `modules/` in order. Modules 03-08 each state a hard prerequisite on an earlier module; skipping ahead means hitting failures the workshop hasn't equipped you to diagnose yet.
 
-> **Current status: all nine modules are skeleton only.** Each has a decided question, arc position, gate shape (including a named fault scenario), and takeaway shape - see [`modules/README.md`](modules/README.md) - but no authored exercise yet. Watch `docs/build-log/` for progress, or [open an issue](https://github.com/coderturtle/heartbeat/issues) to ask.
+> **Current status: Module 01 is real, Modules 02-09 are still skeleton only.** [Module 01, RPC Over an Unreliable Network](modules/01-rpc-over-unreliable-network/README.md) has a working exercise you can actually run today, dry-run against a correct and a naive attempt. The rest have a decided question, arc position, gate shape (including a named fault scenario), and takeaway shape - see [`modules/README.md`](modules/README.md) - but no authored exercise yet. Watch `docs/build-log/` for progress, or [open an issue](https://github.com/coderturtle/heartbeat/issues) to ask.
 
 ## How the modules connect
 

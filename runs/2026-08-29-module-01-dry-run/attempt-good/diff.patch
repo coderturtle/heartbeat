@@ -1,0 +1,23 @@
+--- /tmp/rpc.rs.stub-backup	2026-08-29 15:00:45
++++ /tmp/checkout-dry-run/attempt-good/src/rpc.rs	2026-08-29 15:01:50
+@@ -46,7 +46,8 @@
+ where
+     S: AsyncRead + AsyncWrite + Unpin,
+ {
+-    todo!("implement per this file's doc comments and tests/module_01_rpc_harness.rs")
++    write_framed(stream, request).await?;
++    read_framed(stream).await
+ }
+ 
+ /// Read exactly one request from `stream`, compute a response by calling
+@@ -64,7 +65,9 @@
+ where
+     S: AsyncRead + AsyncWrite + Unpin,
+ {
+-    todo!("implement per this file's doc comments and tests/module_01_rpc_harness.rs")
++    let request: CheckoutRequest = read_framed(stream).await?;
++    let response = handler(request);
++    write_framed(stream, &response).await
+ }
+ 
+ /// Write `value` to `stream` as a length-prefixed JSON frame: a 4-byte

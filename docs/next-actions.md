@@ -16,7 +16,10 @@
 
 ## Later
 
-- [ ] Author Modules 01-09 (Coachgremlin, one module at a time, with real dry runs per the existing Gremlin pattern)
+- [x] Author Module 01 (Coachgremlin's first real content-building pass): exercise, test suite, rubric, and real dry run complete (`runs/2026-08-29-module-01-dry-run/`) — see `docs/decisions.md` for the real finding (cargo test alone didn't catch a read()-vs-read_exact() bug; cargo clippy did)
+- [ ] Author Modules 02-09 (Coachgremlin, one module at a time, with real dry runs per the existing Gremlin pattern) — check fresh each time whether Module 01's "clippy catches what tests don't" pattern generalizes, per that module's own retro
+- [ ] Genericize `fixtures/checkout/tests/module_01_rpc_harness.rs`'s fault-injection harness into a reusable template once Module 02+ needs it, per Module 01's own stated takeaway
+- [ ] Expand Module 01's illustrative 5-seed set to the real practice/held-out split `docs/workshop-design.md` requires (>= 50 independently-generated, disjoint seeds per set) before treating this module as gradeable, not just dry-run-validated
 - [ ] Decide whether `madsim` is ever needed for Module 08 (sharding) specifically — flagged open in `docs/workshop-design.md`
 - [ ] **Human-confirmed first live GitHub Pages deploy** — still open. The site skeleton and deploy workflow exist locally and build clean, but GitHub Pages has not been enabled in repo settings, and the workflow is `workflow_dispatch`-only (no `push` trigger yet) so merging the skeleton to `main` cannot itself trigger a live deploy. Enabling Pages and running `workflow_dispatch` once to confirm the site is ready to be public is a human-confirmed action per the Workshop Gremlin's own Human Gate, same as `borrow-native`'s precedent.
 - [ ] Decide whether to bump `astro` (and `@astrojs/mdx`/`@astrojs/tailwind`) past the current `^5.0.0` pin to clear the inherited `npm audit` findings in `site/` — a major-version, human-confirmed dependency change per `dependency_changes: human_required`, and likely a cross-workshop decision (same pin shared with `borrow-native`/`terminal-velocity`) rather than a heartbeat-only fix
