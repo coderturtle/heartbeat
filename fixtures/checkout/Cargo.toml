@@ -1,0 +1,21 @@
+[package]
+name = "checkout"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "A distributed lock/session-ownership service. Heartbeat's shared throughline project: an honestly uneven build-out across modules, not one feature per module."
+
+[dependencies]
+tokio = { version = "1.53.1", features = ["full"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+
+[dev-dependencies]
+# Pinned exactly, per this workshop's own doubt-driven-development finding
+# (docs/workshop-design.md): a seed's meaning is a function of turmoil's
+# internal scheduler, so an unpinned version bump can silently reshuffle
+# what schedule a given seed number produces. A turmoil upgrade requires
+# re-running both seed sets against a known-correct and a known-wrong
+# implementation before the bump is trusted (see that doc's dangling-
+# reference fix).
+turmoil = "=0.7.2"
