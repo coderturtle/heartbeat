@@ -1,0 +1,33 @@
+.DS_Store
+.env
+*.env
+*.pem
+*.key
+*.log
+# Public-capable repo: factory-internal artefacts live in distributed-systems-workshop-private and are
+# never tracked here. Ignored as a backstop — scaffolding does not create them in this
+# tree, so these entries should never match anything. If they start matching, something
+# reintroduced the leak this split exists to prevent.
+mind-palace/
+.control-tower/
+.hekton/agent-run-log.yaml
+.hekton/change-log.yaml
+.hekton/build-tasks/
+docs/walkthroughs/
+docs/session-log.md
+docs/human-understanding-check.md
+docs/depth-decision.md
+docs/local-assumptions.md
+docs/blog-signals.md
+docs/gremlin-radar.md
+scripts/sync-mirror-to-vault.sh
+scripts/check-mirror-drift.sh
+scripts/setup-hooks.sh
+scripts/verify-project.sh
+__pycache__/
+node_modules/
+.venv/
+dist/
+build/
+*.bak.*
+.project-setup/
