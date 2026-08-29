@@ -20,7 +20,7 @@ A real, seeded bug or non-idiomatic pattern in the accumulated project built acr
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** every module's `turmoil` test suite is green again on the fixed program, across each module's own published seed set.
+- **Deterministic tier:** every module's `turmoil` test suite is green again on the fixed program, across each module's own practice and held-out seed sets.
 - **Conceptual tier (Coachgremlin):** a written diagnosis, produced *before* the fix, that correctly names the root-cause concept (not just a symptom) - Coachgremlin confirms the diagnosis is correct and was actually written first, not reconstructed after the fact.
 
 ## Takeaway

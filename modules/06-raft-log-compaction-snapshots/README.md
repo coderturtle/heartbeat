@@ -20,7 +20,7 @@ Ongaro & Ousterhout, §7, Figure 13. MIT 6.5840 Lab 3D (Log Compaction) for the 
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across a published set of `turmoil` seeds, each simulating a follower lagging far enough behind that its needed log entries were already compacted - that follower catches up via `InstallSnapshot`, not a replay of discarded entries, across every seed in the set.
+- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`), each simulating a follower lagging far enough behind that its needed log entries were already compacted - that follower catches up via `InstallSnapshot`, not a replay of discarded entries, across every seed in both sets.
 - **Conceptual tier (Coachgremlin):** confirms the snapshot boundary itself is chosen correctly (only servers that actually need it receive a snapshot) rather than over-broadly snapshotting servers that could have caught up via normal log replication.
 
 ## Takeaway
@@ -29,7 +29,7 @@ A snapshot-boundary decision guide: when a follower needs a snapshot versus norm
 
 ## Stop condition (placeholder)
 
-The learner's implementation passes the deterministic tier across the full published seed set, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's implementation passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 
