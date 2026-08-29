@@ -4,7 +4,7 @@
 *.pem
 *.key
 *.log
-# Public-capable repo: factory-internal artefacts live in distributed-systems-workshop-private and are
+# Public-capable repo: factory-internal artefacts live in heartbeat-private and are
 # never tracked here. Ignored as a backstop — scaffolding does not create them in this
 # tree, so these entries should never match anything. If they start matching, something
 # reintroduced the leak this split exists to prevent.

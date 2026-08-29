@@ -1,4 +1,4 @@
-# Decisions: Distributed Systems Workshop
+# Decisions: Heartbeat
 
 ## ADR Log
 

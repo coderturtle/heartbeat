@@ -1,4 +1,4 @@
-# Distributed Systems Workshop
+# Heartbeat
 
 **Classification:** factory-output
 **Lifecycle:** active

@@ -1,4 +1,4 @@
-# Next Actions: Distributed Systems Workshop
+# Next Actions: Heartbeat
 
 ## Immediate
 
