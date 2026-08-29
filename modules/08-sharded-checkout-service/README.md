@@ -11,7 +11,8 @@ Eighth module - last of the core arc before the capstone. Prerequisite: [Module 
 ## Learning objectives (placeholder - finalized when content is authored)
 
 - Implement a shard controller that assigns resource namespaces (e.g., which repo, which branch) to replica groups and can rebalance that assignment as the fleet of agent sessions using `Checkout` grows.
-- Implement shard migration between replica groups such that a resource's checkout state is served correctly during the handoff, not just before and after it - an in-flight lease can't be lost or duplicated mid-migration.
+- Route shard assignment using the *exact same* canonical resource identifier Module 02's exclusivity check uses (`docs/workshop-design.md`, fixed 2026-08-29 via doubt-driven-development) - a shard router that independently parses or normalizes the resource name (e.g., stripping a `refs/heads/` prefix for routing but not for the lock itself) can let two different-looking names for the same resource land on different shards and bypass the lock entirely.
+- Implement shard migration between replica groups such that a resource's *entire* replicated state moves atomically - not just the lease, but its generation counter, the relevant slice of the request-ID dedup table, and the replicated logical clock (`docs/workshop-design.md`, cycle 2 of this design's doubt-driven-development review). Moving the lease but leaving generation or dedup state behind reopens the same stale-command and double-grant bugs this design already closed, just at the shard boundary instead of the replica boundary.
 - Reason about the specific danger a single-node sharding scheme doesn't have: a partition during migration could leave a resource looking owned by two groups, or by none.
 
 ## Exercise material to draw from (not a spec - Coachgremlin authors the real exercise later)

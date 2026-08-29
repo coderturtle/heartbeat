@@ -23,6 +23,8 @@ A real, seeded bug or non-idiomatic pattern in the accumulated `Checkout` servic
 - **Deterministic tier:** every module's `turmoil` test suite is green again on the fixed program, across each module's own practice and held-out seed sets.
 - **Conceptual tier (Coachgremlin):** a written diagnosis, produced *before* the fix, that correctly names the root-cause concept (not just a symptom) - Coachgremlin confirms the diagnosis is correct and was actually written first, not reconstructed after the fact.
 
+**Grading must be designed against known bypass patterns, not just trusted, added 2026-08-29 via doubt-driven-development.** This factory has direct, evidenced history with checker-execution-bypass patterns - a shadow module planted in the working directory, or an exit-code short-circuit, defeating a checker that only inspects a process's return code. Coachgremlin's content-building pass must design this module's grading (how the seeded bug is verified fixed, how the written diagnosis is checked against the actual root cause) with that specific failure mode in mind from the start: a neutral, non-learner-writable execution directory and a real pass-count/behavior verification, not a bare exit-code check.
+
 ## Takeaway
 
 A personal distributed-systems diagnostic playbook, compressing the whole arc's diagnostic habits (RPC-layer doubt, election reasoning, log-matching checks, persistence minimality, snapshot boundaries, layering discipline, ownership invariants) into one checklist, built *from* the defended diagnosis above, not a substitute for it. Packaged by Coachgremlin once the rubric is met.
