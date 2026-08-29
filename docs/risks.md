@@ -1,4 +1,4 @@
-# Risks: Distributed Systems Workshop
+# Risks: Heartbeat
 
 ## Risk Register
 

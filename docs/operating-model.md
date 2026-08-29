@@ -1,4 +1,4 @@
-# Operating Model: Distributed Systems Workshop
+# Operating Model: Heartbeat
 
 ## Classification
 

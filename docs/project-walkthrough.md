@@ -1,4 +1,4 @@
-# Distributed Systems Workshop — Plain-English Project Walkthrough
+# Heartbeat — Plain-English Project Walkthrough
 
 ## What this project is in one paragraph
 

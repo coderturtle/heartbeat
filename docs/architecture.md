@@ -1,4 +1,4 @@
-# Architecture: Distributed Systems Workshop
+# Architecture: Heartbeat
 
 ## Overview
 

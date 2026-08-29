@@ -1,7 +1,7 @@
 # Walkthrough: {Session Title}
 
 **Date:** YYYY-MM-DD
-**Project:** Distributed Systems Workshop
+**Project:** Heartbeat
 **Prompt / Session:** N
 
 ## What changed in plain English
@@ -10,7 +10,7 @@
 
 ## The simple analogy
 
-## How this ties to Distributed Systems Workshop
+## How this ties to Heartbeat
 
 ## How this ties to the Hekton factory vision
 
