@@ -20,3 +20,10 @@
 - [ ] Decide whether to bump `astro` (and `@astrojs/mdx`/`@astrojs/tailwind`) past the current `^5.0.0` pin to clear the inherited `npm audit` findings in `site/` — a major-version, human-confirmed dependency change per `dependency_changes: human_required`, and likely a cross-workshop decision (same pin shared with `borrow-native`/`terminal-velocity`) rather than a heartbeat-only fix
 - [ ] Design a debugging aid for the Module 06→07 integration point (first time persistence, compaction, and replication all combine) — flagged by the Review Panel's End-User/Learner persona as the highest-risk drop-off point in the arc; Coachgremlin's job at content-building time
 - [ ] Decide and document whether agent-generated code auto-merges on a passing gate or requires human review first — flagged by the Review Panel's Security-Conscious Reviewer persona; an implementation-spec decision, not resolved by this design pass
+
+## Session Update: 2026-08-29 — Scaffold, name, design, review, and build skeleton for Heartbeat
+
+- [ ] Author Modules 01-09 via Coachgremlin one at a time with real dry runs
+- [ ] get human to enable GitHub Pages and trigger first deploy
+- [ ] decide the astro-version-bump question
+- [ ] decide whether Module 08 needs madsim instead of turmoil
