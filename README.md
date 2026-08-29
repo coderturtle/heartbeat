@@ -1,36 +1,55 @@
 # Heartbeat
 
-**Classification:** factory-output
-**Lifecycle:** active
-**Owner:** coderturtle
-**Promotion target:** `none`
+A correct-looking Raft implementation can pass every unit test and still lose committed data the first time a network partition heals badly. Heartbeat is a self-paced workshop that makes you build the network fault into the test, not just the code into the test.
 
-> Learn distributed systems the agent-native way: build Raft from scratch in Rust, from RPC through leader election, log replication, a KV store, and sharding, mirroring MIT 6.824/6.5840's lab progression, with a custom network-simulation test harness as the deterministic gate and Coachgremlin grading the conceptual layer on top.
+## What this is
 
-## Implementation Status
+You already learned Rust the agent-native way, maybe via [`borrow-native`](https://github.com/coderturtle/borrow-native). This workshop teaches distributed systems the same way: build Raft from scratch, module by module, with your own coding-agent harness doing the typing and two gates checking the result. First, a **deterministic gate**: your implementation runs against [`turmoil`](https://docs.rs/turmoil), a simulator that drops, delays, reorders, and partitions network traffic on command, across a published set of seeds, not just one. Second, a **conceptual check** from Coachgremlin, this workshop's teaching agent (a role you run yourself, inside your own harness, not a hosted service): can you explain *why* your implementation is safe, not just that it happened to survive every seed you were tested against.
 
-- Scaffolded 2026-08-29 — initial setup in progress.
+The name is Raft's own term for the RPC a leader sends to prove it's still alive. This workshop's bet is that "still alive" is a much harder claim to verify than it sounds, and the whole arc is built around actually checking it instead of assuming it.
 
-## Documentation Contract
+**Who it's for:** agent-literate practitioners, comfortable with git, the CLI, and a coding agent, already fluent in Rust (ownership, borrowing, traits, async - the level `borrow-native` teaches to). Not a Rust-fundamentals workshop and not a true-beginner distributed-systems course. The one thing assumed unfamiliar is distributed systems itself.
 
-Agents working here must inspect `.hekton/project.yaml` before structural changes, keep `docs/session-log.md` current, record meaningful design decisions in `docs/decisions.md`, and update `docs/next-actions.md` when the work queue changes.
+## Prerequisites
 
-Vault mutation policy: see `vault_mutation_allowed` in `.hekton/project.yaml` (authoritative; defaults to false at scaffold time). The repo-local `mind-palace/` folder is only a mirror draft; do not write to the live vault unless `.hekton/project.yaml` says mutation is allowed and it is explicitly authorised in-session.
+- Comfortable with git, the CLI, and reading a diff.
+- Fluent in Rust: ownership, borrowing, traits, `async`/await.
+- Already using at least one coding-agent harness regularly, with one installed on your machine.
+- Rust and `cargo` installed (`rustup`).
 
-## Quick Start
+## How to start
 
 ```bash
-# Add project-specific commands here
+git clone git@github.com:coderturtle/heartbeat.git
+cd heartbeat
+cat modules/README.md
 ```
 
-## Key Docs
+Then work through `modules/` in order. Modules 03-08 each state a hard prerequisite on an earlier module; skipping ahead means hitting failures the workshop hasn't equipped you to diagnose yet.
 
-- [Session Log](docs/session-log.md)
-- [Decisions](docs/decisions.md)
-- [Risks](docs/risks.md)
-- [Project Walkthrough](docs/project-walkthrough.md)
-- [Next Actions](docs/next-actions.md)
-- [Operating Model](docs/operating-model.md)
-- [Human Understanding Check](docs/human-understanding-check.md)
-- [Depth Decision](docs/depth-decision.md)
+> **Current status: all nine modules are skeleton only.** Each has a decided question, arc position, gate shape (including a named fault scenario), and takeaway shape - see [`modules/README.md`](modules/README.md) - but no authored exercise yet. Watch `docs/build-log/` for progress, or [open an issue](https://github.com/coderturtle/heartbeat/issues) to ask.
 
+## How the modules connect
+
+RPC has no prerequisite, but it's not a warm-up: it's where you build the network-fault-injection harness every later module depends on. A single-node KV service comes next, deliberately unreplicated, so a bug found later when it's wrapped in Raft is attributable to the Raft layer, not the API. Then Raft itself, in MIT 6.5840's own real order: leader election, log replication, persistence, log compaction. A fault-tolerant KV service wraps that complete Raft in the earlier KV interface. Sharding splits one replicated service into many. A synthesis capstone closes the arc: given a real bug in the system you built, diagnose which concept is actually the root cause. Full arc, gate tiers, and the curriculum research behind it: [`modules/README.md`](modules/README.md).
+
+## What you keep
+
+Every module leaves you with something, not just a passed check: a reusable network-fault-injection harness, an API-design checklist, a leader-election diagnostic playbook, a log-matching checklist, a "what needs to survive a crash" checklist, a snapshot-boundary decision guide, a layering playbook, a shard-ownership checklist, and a personal distributed-systems diagnostic playbook tying it all together. See [`modules/README.md`](modules/README.md#what-you-keep) for the full list.
+
+## The teaching method
+
+Distributed systems has a property Rust's own compiler doesn't: a broken implementation can pass a test by luck, not just by correctness, because the specific fault that would expose the bug simply didn't happen to fire on that run. That's why this workshop's deterministic gate requires green across a published *set* of `turmoil` seeds, not one, and why Coachgremlin's conceptual tier exists on top of it: to catch design choices that happen to survive every seed tried so far without actually being correct. This is a stated design bet, not a proven finding yet - no module content exists to test it against a real learner. See [`docs/workshop-design.md`](docs/workshop-design.md) for the full reasoning, the MIT 6.5840 curriculum research behind this arc, and what's still open.
+
+## Build in public
+
+This workshop's own build will be published as a dated journal at `coderturtle.github.io/heartbeat` once the site is built and the first deploy is human-confirmed: the maintainer's record of building the workshop and its reusable Gremlin tooling at the same time, written deliberately rather than auto-generated from session logs.
+
+## Something wrong?
+
+This is early and imperfect by design. If a module reduces to "read this, then move on" instead of a real gate, or a link here is broken, [open an issue](https://github.com/coderturtle/heartbeat/issues).
+
+## Key docs
+
+- [Workshop Design](docs/workshop-design.md): audience, format, MIT 6.5840 curriculum research, deterministic-gate teaching method, full module arc
+- [Maintainers](docs/maintainers.md): internal/agent-facing docs, classification, documentation contract

@@ -4,8 +4,8 @@
 
 - [x] Naming pass complete — Heartbeat
 - [x] `docs/workshop-design.md` drafted (curriculum anchor, module arc, gate-harness decision)
-- [ ] Run first Workshop Review Panel pass against naming + design docs
-- [ ] Build module/deliverables skeleton (`modules/01-...` through `09-synthesis-capstone`) + brand layer (`docs/brand.md`)
+- [x] Run first Workshop Review Panel pass against naming + design docs
+- [x] Build module/deliverables skeleton (`modules/01-...` through `09-synthesis-capstone`) + brand layer (`docs/brand.md`) + README rework + `docs/maintainers.md` split
 - [ ] Stand up build-log/Pages site skeleton
 
 ## This Week
