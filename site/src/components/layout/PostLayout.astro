@@ -1,0 +1,42 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  pubDate: Date;
+  updatedDate?: Date;
+  tags?: string[];
+  canonicalUrl?: string;
+}
+
+const { title, description, pubDate, updatedDate, tags = [], canonicalUrl } = Astro.props;
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" });
+---
+
+<BaseLayout title={title} description={description}>
+  {canonicalUrl && <link slot="head" rel="canonical" href={canonicalUrl} />}
+  <article>
+    <h1 class="text-4xl font-bold leading-tight tracking-tight">{title}</h1>
+    <p class="mt-4 text-xl leading-snug opacity-80">{description}</p>
+    <p class="mt-4 text-sm opacity-70">
+      {fmt(pubDate)}
+      {updatedDate && <> · updated {fmt(updatedDate)}</>}
+    </p>
+    {
+      tags.length > 0 && (
+        <ul class="mt-2 flex flex-wrap gap-2 text-xs">
+          {tags.map((t) => (
+            <li class="rounded bg-ink/5 px-2 py-1 font-mono">#{t}</li>
+          ))}
+        </ul>
+      )
+    }
+
+    <div class="post-body mt-10">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>
