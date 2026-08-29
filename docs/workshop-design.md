@@ -6,6 +6,8 @@
 
 Agent-literate practitioners who've already learned Rust the agent-native way (via `borrow-native` or equivalent) hit a second wall: distributed systems is a subject where almost nothing compiles wrong, yet almost everything can still be wrong — a correct-looking Raft implementation can pass every unit test and still lose committed data the first time a network partition heals badly. This workshop's bet is that the fix isn't more reading (MIT's own 6.5840 course material is excellent and freely available), it's a **deterministic gate that can actually see network faults**, not just type errors, paired with an agent-native harness and Coachgremlin's conceptual layer on top.
 
+**Reseeded 2026-08-29, after a staff-engineer-level critique of the first design:** the original arc built a generic, unnamed "sharded key-value store" — the single most well-trodden vehicle in every distributed-systems course that exists, including 6.5840 itself, and one with zero thematic connection to this workshop's own audience. Every module now builds one real product instead: **Checkout**, a distributed lock/session-ownership service. This isn't an arbitrary reskin — it's the exact shape of a real problem this factory's own `git-contract.md` already documents (don't let two concurrent agent sessions yank a shared branch or worktree out from under each other; use a linked worktree instead, since two sessions can't safely hold the same branch at once). Checkout is that coordination primitive, built from scratch: `Checkout(resource, holder, lease_duration)` grants exclusive, time-bounded ownership; `Renew` extends it; `Return` releases it early; a lease that's never renewed expires on its own, so a crashed holder doesn't lock a resource forever.
+
 ## Audience
 
 Agent-literate practitioners: comfortable with git, the CLI, driving a coding agent daily, and already fluent in Rust specifically (ownership, borrowing, traits, `async`/await — the level `borrow-native` teaches to). **Not** a Rust-fundamentals workshop and **not** a true-beginner distributed-systems course — the one thing assumed unfamiliar is distributed systems itself: consensus, replication, partition tolerance, and what a network can actually do to a running protocol.
@@ -20,6 +22,19 @@ Self-paced, public repo. Matches `terminal-velocity` and `borrow-native`'s prece
 - **Method:** agent-native — every module's core exercise runs through the learner's own coding-agent harness, graded first by a **deterministic check** (a real Raft implementation tested against real, simulated network faults), then by Coachgremlin's conceptual feedback on top.
 
 The hook is the same shape as `borrow-native`'s, extended: "let a simulated, adversarial network — not an opinion — be the first gate." That claim leans on the multi-seed deterministic-tier design in "The deterministic gate, in the two-tier vocabulary" section below — a single arbitrary seed can get lucky the way a compiler never does, which is why that section makes "green across a published seed set" the standing requirement rather than "green once."
+
+## The shared project: `Checkout`
+
+Added 2026-08-29, reseeding the arc around one real product instead of a generic KV store, the same shape decision `borrow-native` made when it retired a standalone toy exercise in favor of `relay`. **This deliberately doesn't copy `relay`'s exact shape**, and that difference is worth stating rather than silently diverging: `relay` adds one real feature to the same running project every single module, because Rust's own concept arc (ownership → borrowing → ... → async) is a chain where each concept is genuinely needed to build the next feature. Raft's own protocol modules don't have that property — leader election, log replication, persistence, and log compaction are generic consensus mechanics that don't know anything about locks or leases; they replicate opaque log entries for *any* application built on top. Forcing Checkout-specific busywork into those modules would misrepresent how real systems are actually layered (this is exactly how 6.5840 itself is structured: Lab 3's Raft is generic, Lab 4's KV service is the specific application on top). So Checkout's own build-out is honestly uneven, not evenly spread:
+
+| # | Module | What it adds to `Checkout` |
+|---|---|---|
+| 01 | RPC Over an Unreliable Network | The RPC layer itself, exercised with Checkout's own message shapes (`CheckoutRequest`/`CheckoutResponse`: resource, holder, lease duration) even though no real checkout logic exists yet — the first appearance of the domain type every later module builds on |
+| 02 | A Single-Node Checkout Service | The real `Checkout`/`Renew`/`Return`/`Status` API against a single in-memory node: exclusivity, lease expiry, no replication yet |
+| 03-06 | Raft: Leader Election, Log Replication, Persistence, Log Compaction & Snapshots | The generic Raft engine `Checkout` will run on in Module 07 — deliberately not Checkout-specific; connective narrative in each module names what this engine will eventually carry |
+| 07 | Fault-Tolerant Checkout Service on Raft | Module 02's API wrapped in Module 06's Raft engine: checkout/renew/return/status requests replicated, surviving a leader failover mid-request |
+| 08 | Sharded Checkout Service | Resources partitioned by namespace (e.g., which repo, which branch) across many replica groups, so the service scales to a large fleet of concurrent agent sessions |
+| 09 | Synthesis capstone | A real, seeded bug in the accumulated `Checkout` service — diagnose the root-cause concept, fix it |
 
 ## Canonical-curriculum anchor (research pass, 2026-08-29)
 
@@ -64,21 +79,21 @@ Anchored to 6.5840's real lab order (corrected above), scoped for a learner who 
 
 | # | Module | Hard prerequisite | 6.5840 anchor | Gate's named fault scenario (deterministic tier) |
 |---|---|---|---|---|
-| 01 | RPC Over an Unreliable Network | none (Rust fluency assumed) — **but see the callout below: this is not a warm-up** | "RPC and Threads" lecture; `labrpc`'s own role, reimplemented as this workshop's `turmoil`-backed harness | The harness itself, under test: dropped/delayed/reordered messages arrive at a toy RPC service exactly as configured, across a fixed seed set |
-| 02 | A Single-Node KV Service | 01 (needs the RPC layer to expose a service at all) | Lab 2 — deliberately unreplicated; the interface this whole arc eventually wraps in Raft | Concurrent client requests against the single-node service under injected latency/reordering never corrupt state, even with no replication involved yet |
+| 01 | RPC Over an Unreliable Network | none (Rust fluency assumed) — **but see the callout below: this is not a warm-up** | "RPC and Threads" lecture; `labrpc`'s own role, reimplemented as this workshop's `turmoil`-backed harness | The harness itself, under test: dropped/delayed/reordered `CheckoutRequest`/`CheckoutResponse` messages arrive exactly as configured, across both seed sets |
+| 02 | A Single-Node Checkout Service | 01 (needs the RPC layer to expose a service at all) | Lab 2 — deliberately unreplicated; the interface this whole arc eventually wraps in Raft | Concurrent checkout requests against the single-node service under injected latency/reordering never grant the same resource to two holders at once, and every lease correctly expires |
 | 03 | Raft: Leader Election | 01 (RPCs) | Lab 3A; Raft paper §5.2, Fig. 2, Fig. 4 | A `turmoil` partition isolating the current leader; exactly one new leader is elected in the majority partition, never two leaders in the same term |
 | 04 | Raft: Log Replication | 03 (a leader must exist before it can replicate a log) | Lab 3B; Raft paper §5.3-5.4.1 | A follower that missed several entries catches up correctly after a simulated partition heals, with the log-matching property intact |
 | 05 | Raft: Persistence | 04 (persisted state is the log/term/vote Module 04 already produces) | Lab 3C; Raft paper Fig. 2's persistent-state fields | A `turmoil`-simulated crash-and-restart mid-replication recovers exactly the pre-crash persisted state, never re-votes in an already-decided term |
 | 06 | Raft: Log Compaction & Snapshots | 05 (you can only discard what's already durably persisted) | Lab 3D; Raft paper §7, Fig. 13 | A follower lagging far enough behind that its needed log entries were already compacted catches up via `InstallSnapshot`, not a replay of discarded entries |
-| 07 | Fault-Tolerant KV Service on Raft | 02 (the KV interface) and 06 (a complete Raft) | Lab 4 | The KV service stays linearizable across a `turmoil`-simulated leader failover mid-request — a client never observes a committed write disappear or an uncommitted one become visible |
-| 08 | Sharded KV Service | 07 | Lab 5 | A shard migration in progress, combined with a simulated partition on the source or destination group, never leaves a key owned by zero or two groups at once |
-| 09 | Synthesis capstone | all of the above | — | A real, seeded bug in the accumulated project spanning 3+ concepts from the arc — the learner must get every module's `turmoil` suite green again (deterministic tier) *and* correctly diagnose, in writing, which arc concept was the actual root cause before fixing it (conceptual tier), mirroring `borrow-native`'s own capstone shape |
+| 07 | Fault-Tolerant Checkout Service on Raft | 02 (the Checkout interface) and 06 (a complete Raft) | Lab 4 | The Checkout service stays linearizable across a `turmoil`-simulated leader failover mid-request — a client never observes a granted lease disappear, nor a denied checkout silently become granted |
+| 08 | Sharded Checkout Service | 07 | Lab 5 | A shard migration in progress, combined with a simulated partition on the source or destination group, never leaves a resource owned by zero or two groups at once |
+| 09 | Synthesis capstone | all of the above | — | A real, seeded bug in the accumulated `Checkout` service spanning 3+ concepts from the arc — the learner must get every module's `turmoil` suite green again (deterministic tier) *and* correctly diagnose, in writing, which arc concept was the actual root cause before fixing it (conceptual tier), mirroring `borrow-native`'s own capstone shape |
 
 **Module 01 is not a warm-up.** Flagged directly per this workshop's own Review Panel (`docs/review-panel/2026-08-29-initial-design.md`, End-User/Learner persona): "no prerequisite" describes the *concept* dependency, not the *engineering* difficulty. Module 01 is where the learner builds the `turmoil`-backed harness every later module's gate depends on, with zero distributed-systems intuition yet — closer to this workshop's hardest onboarding ramp than a gentle first step. Content-building should treat it accordingly (more scaffolding, not less).
 
 ### Why this order
 
-Modules 03-06 are 6.5840's own Raft parts kept in their original order rather than re-split — Ongaro & Ousterhout's paper and the lab's own structure already argue for leader election before replication (nothing to replicate without a leader), replication before persistence (persistence exists to survive a crash mid-replication), and persistence before compaction (compaction discards persisted state, so the thing being discarded has to be reliably saved first). Module 02 sits before Module 03, matching 6.5840's real order and this design doc's own correction above: building the KV interface without replication first means every bug surfaced in Module 07 is attributable to the Raft layer, not the API design — worth being honest that this is a debugging-attribution argument, not a hard technical dependency the way 03→04→05→06 are (Module 03 doesn't actually require Module 02's code to exist). Module 08 (sharding) is last among the core modules because it assumes a working replicated KV service to shard in the first place.
+Modules 03-06 are 6.5840's own Raft parts kept in their original order rather than re-split — Ongaro & Ousterhout's paper and the lab's own structure already argue for leader election before replication (nothing to replicate without a leader), replication before persistence (persistence exists to survive a crash mid-replication), and persistence before compaction (compaction discards persisted state, so the thing being discarded has to be reliably saved first). Module 02 sits before Module 03, matching 6.5840's real order and this design doc's own correction above: building `Checkout`'s interface without replication first means every bug surfaced in Module 07 is attributable to the Raft layer, not the API design — worth being honest that this is a debugging-attribution argument, not a hard technical dependency the way 03→04→05→06 are (Module 03 doesn't actually require Module 02's code to exist; it's building the generic Raft engine `Checkout` will only sit on top of starting Module 07, per "The shared project" section above). Module 08 (sharding) is last among the core modules because it assumes a working replicated `Checkout` service to shard in the first place.
 
 ## The deterministic gate, in the two-tier vocabulary `borrow-native` established
 
@@ -110,13 +125,13 @@ Per the Workshop Gremlin's takeaway requirement — concrete takeaways are Coach
 | # | Module | Intended takeaway shape |
 |---|---|---|
 | 01 | RPC Over an Unreliable Network | A `turmoil`-based network-fault-injection harness template, reusable on future async Rust projects |
-| 02 | A Single-Node KV Service | An API-design checklist for "what does this interface need to support before I even think about replicating it" |
+| 02 | A Single-Node Checkout Service | An exclusive-ownership API checklist: idempotent checkout, renewal races, lease-duration tradeoffs, before replication ever enters the picture |
 | 03 | Raft: Leader Election | A leader-election diagnostic playbook (term/vote/timeout reasoning) |
 | 04 | Raft: Log Replication | A log-matching-property diagnostic checklist |
 | 05 | Raft: Persistence | A "what actually needs to survive a crash" checklist, generalizable beyond Raft |
 | 06 | Raft: Log Compaction & Snapshots | A snapshot-boundary decision guide |
-| 07 | Fault-Tolerant KV Service on Raft | A layering playbook: how to keep a service's API and its consensus layer independently testable |
-| 08 | Sharded KV Service | A shard-rebalancing/ownership-handoff checklist |
+| 07 | Fault-Tolerant Checkout Service on Raft | A layering playbook: how to keep a service's API and its consensus layer independently testable |
+| 08 | Sharded Checkout Service | A shard-rebalancing/ownership-handoff checklist |
 | 09 | Synthesis capstone | A personal distributed-systems diagnostic playbook compressing the whole arc |
 
 ## Build-in-public build log

@@ -6,7 +6,9 @@ How do I discard old log entries without losing a lagging follower?
 
 ## Where it sits in the arc
 
-Sixth module - last of the core Raft parts. Prerequisite: [Module 05](../05-raft-persistence/README.md) - you can only discard what's already durably persisted; compaction on top of an unreliable persistence layer would lose data outright. Next: [Module 07, Fault-Tolerant KV Service on Raft](../07-fault-tolerant-kv-service/README.md) - the hinge is that a complete Raft (all four parts) is what gets wrapped in a real service next. See [`modules/README.md`](../README.md) for the full arc and why this order.
+Sixth module - last of the core Raft parts. Prerequisite: [Module 05](../05-raft-persistence/README.md) - you can only discard what's already durably persisted; compaction on top of an unreliable persistence layer would lose data outright. Next: [Module 07, Fault-Tolerant Checkout Service on Raft](../07-fault-tolerant-checkout-service/README.md) - the hinge is that a complete Raft (all four parts) is what `Checkout` gets wrapped around next. See [`modules/README.md`](../README.md) for the full arc and why this order.
+
+**The last generic module.** After this one, the Raft engine is complete and Module 07 starts wrapping `Checkout`'s actual API (from Module 02) around it - see [`modules/README.md`](../README.md)'s "One shared project" section.
 
 ## Learning objectives (placeholder - finalized when content is authored)
 

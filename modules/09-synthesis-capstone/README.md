@@ -16,7 +16,7 @@ Ninth and final module. Prerequisite: all of Modules 01-08 - this module doesn't
 
 ## Exercise material to draw from (not a spec - Coachgremlin authors the real exercise later)
 
-A real, seeded bug or non-idiomatic pattern in the accumulated project built across Modules 01-08 (mirrors `borrow-native`'s own capstone shape: diagnose the bottleneck, fix it, defend the diagnosis in writing - against a real project the learner helped build, not a fixture manufactured just to be broken). See [`docs/workshop-design.md`](../../docs/workshop-design.md).
+A real, seeded bug or non-idiomatic pattern in the accumulated `Checkout` service built across Modules 01-08 (mirrors `borrow-native`'s own capstone shape: diagnose the bottleneck, fix it, defend the diagnosis in writing - against a real product the learner helped build, not a fixture manufactured just to be broken). See [`docs/workshop-design.md`](../../docs/workshop-design.md).
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 

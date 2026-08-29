@@ -11,6 +11,8 @@
 
 The name is Raft's own term for the RPC a leader sends to prove it's still alive — the workshop's whole premise is that "still alive" is a much harder claim to verify in a distributed system than it sounds, and this workshop's deterministic gate exists to actually check it rather than assume it.
 
+**Reseeded 2026-08-29:** every module now builds one real product, `Checkout` (a distributed lock/session-ownership service), rather than a generic key-value store — see `docs/workshop-design.md`'s "The shared project: `Checkout`" section for the full reasoning. `Checkout` is a proper noun within this workshop's own voice: never lowercase it, never call it "the KV store" in anything published.
+
 ## Tone and voice
 
 **Core voice:** A competent peer, not an instructor. Specific, dryly funny, anti-hype by default. Treats the reader as someone who already ships Rust daily (via `borrow-native` or equivalent) — the only thing assumed unfamiliar is distributed systems itself.

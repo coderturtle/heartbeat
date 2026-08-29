@@ -6,7 +6,7 @@ How do I build an RPC layer, and the harness that can lie to it convincingly?
 
 ## Where it sits in the arc
 
-First module. No conceptual prerequisite - but see the callout below, this is not a warm-up. Next: [Module 02, A Single-Node KV Service](../02-single-node-kv-service/README.md), which builds its first real service on top of the RPC layer this module produces. See [`modules/README.md`](../README.md) for the full arc and why this order.
+First module. No conceptual prerequisite - but see the callout below, this is not a warm-up. Next: [Module 02, A Single-Node Checkout Service](../02-single-node-checkout-service/README.md), which builds `Checkout`'s first real service on top of the RPC layer this module produces. See [`modules/README.md`](../README.md) for the full arc, why this order, and how this module's own exercise fits into `Checkout`, the one product this whole arc builds.
 
 **This module is not a gentle warm-up.** It's where you build the `turmoil`-backed network-fault-injection harness every later module's deterministic gate depends on - real engineering work, with zero distributed-systems intuition yet to lean on. See `docs/workshop-design.md`'s callout on this, added after this workshop's own Review Panel flagged the "no prerequisite" framing as underselling the difficulty.
 
@@ -14,6 +14,7 @@ First module. No conceptual prerequisite - but see the callout below, this is no
 
 - Build an async Rust RPC mechanism (request/response over a simulated network) from first principles, without reaching for an existing RPC framework.
 - Use `turmoil` to inject latency, packet loss, reordering, and partitions into that RPC mechanism, and observe each fault's effect directly.
+- Define `Checkout`'s own message shapes (`CheckoutRequest`/`CheckoutResponse`: resource, holder, lease duration) as the payload this RPC layer carries - no real checkout logic yet, just the domain type every later module builds on.
 - Explain, from having built it, what MIT 6.5840's own `labrpc` package does for Go learners and why an equivalent doesn't yet exist off the shelf for Rust.
 
 ## Exercise material to draw from (not a spec - Coachgremlin authors the real exercise later)

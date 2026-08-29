@@ -7,6 +7,8 @@
 - [x] Run first Workshop Review Panel pass against naming + design docs
 - [x] Build module/deliverables skeleton (`modules/01-...` through `09-synthesis-capstone`) + brand layer (`docs/brand.md`) + README rework + `docs/maintainers.md` split
 - [x] Stand up build-log/Pages site skeleton — `site/` (Astro 5, Content Layer API reading `docs/build-log/`), one real seed entry (`docs/build-log/2026-08-29-scaffold-and-design.md`), `.github/workflows/deploy-pages.yml` (`workflow_dispatch` only for now). `npm run build` and `npx astro check` both clean locally; `npm audit` found 5 inherited-from-starter vulnerabilities (astro/esbuild/sharp, fixable only via a major astro version bump — flagged, not applied unilaterally, see `docs/decisions.md`)
+- [x] Revise the deterministic-gate design through 3 doubt-driven-development cycles (see `docs/decisions.md` and `docs/workshop-design.md`)
+- [x] Reseed the arc around one real product, `Checkout` (see `docs/decisions.md` and `docs/workshop-design.md`'s "The shared project" section)
 
 ## This Week
 
