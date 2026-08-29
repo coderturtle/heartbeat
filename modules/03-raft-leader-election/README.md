@@ -20,7 +20,7 @@ Ongaro & Ousterhout, "In Search of an Understandable Consensus Algorithm (Extend
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across a published set of `turmoil` seeds, each simulating a partition that isolates the current leader - exactly one new leader is elected in the resulting majority partition, and never two leaders exist in the same term across any seed in the set.
+- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`), each simulating a partition that isolates the current leader - exactly one new leader is elected in the resulting majority partition, and never two leaders exist in the same term across any seed in either set.
 - **Conceptual tier (Coachgremlin):** confirms the learner can explain, in writing, why the election-restriction rule prevents a stale candidate from winning, rather than having implemented it by pattern-matching the paper's pseudocode without understanding why it's there.
 
 ## Takeaway
@@ -29,7 +29,7 @@ A leader-election diagnostic playbook: how to reason about term numbers, votes, 
 
 ## Stop condition (placeholder)
 
-The learner's implementation passes the deterministic tier across the full published seed set, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's implementation passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 

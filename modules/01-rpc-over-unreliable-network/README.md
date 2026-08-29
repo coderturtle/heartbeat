@@ -22,7 +22,7 @@ MIT 6.5840's "RPC and Threads" lecture and the `labrpc` package's role in the co
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across a published set of `turmoil` seeds, exercising the harness itself: a message sent under a configured fault (drop, delay, reorder, partition) behaves exactly as that fault specifies, across every seed in the set - not just one.
+- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`), exercising the harness itself: a message sent under a configured fault (drop, delay, reorder, partition) behaves exactly as that fault specifies, across every seed in both sets - not just one.
 - **Conceptual tier (Coachgremlin):** confirms the learner can explain why a single arbitrary seed wouldn't have been sufficient evidence the harness works, and that the harness's own API doesn't accidentally make a class of fault impossible to configure.
 
 ## Takeaway
@@ -31,7 +31,7 @@ A `turmoil`-based network-fault-injection harness template: reusable scaffolding
 
 ## Stop condition (placeholder)
 
-The learner's harness passes the deterministic tier across the full published seed set, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's harness passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 

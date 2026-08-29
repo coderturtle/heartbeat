@@ -20,7 +20,7 @@ MIT 6.5840 Lab 2 (Key/Value Server) - deliberately unreplicated, the interface t
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across a published set of `turmoil` seeds - concurrent client requests against the single-node service, under injected latency and reordering, never corrupt state or produce a result inconsistent with some valid serial order of the requests actually sent.
+- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`) - concurrent client requests against the single-node service, under injected latency and reordering, never corrupt state or produce a result inconsistent with some valid serial order of the requests actually sent.
 - **Conceptual tier (Coachgremlin):** confirms the interface design itself (not just this implementation) would still make sense once a caller can't assume a single in-process server - i.e., the API doesn't quietly bake in single-node assumptions Module 07 will have to unwind.
 
 ## Takeaway
@@ -29,7 +29,7 @@ An API-design checklist: what a service interface needs to support before it can
 
 ## Stop condition (placeholder)
 
-The learner's KV service passes the deterministic tier across the full published seed set, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's KV service passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 
