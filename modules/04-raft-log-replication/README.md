@@ -22,7 +22,7 @@ Ongaro & Ousterhout, §5.3-5.4.1, Figure 2. MIT 6.5840 Lab 3B (Log Replication) 
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`), each simulating a follower that missed several entries during a partition - after the partition heals, that follower's log converges to exactly match the leader's, with the log-matching property verifiably intact, across every seed in both sets.
+- **Deterministic tier:** `cargo test` green across the practice set and the grading draw (see `docs/workshop-design.md`), each simulating a follower that missed several entries during a partition - after the partition heals, that follower's log converges to exactly match the leader's, with the log-matching property verifiably intact, across every drawn seed.
 - **Conceptual tier (Coachgremlin):** confirms the learner can explain why an entry from a prior term needs indirect commitment (via a later entry in the current term) rather than being committed directly once replicated to a majority.
 
 ## Takeaway
@@ -31,7 +31,7 @@ A log-matching-property diagnostic checklist: how to tell, from a divergent log 
 
 ## Stop condition (placeholder)
 
-The learner's implementation passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's implementation passes the deterministic tier across the practice set and the grading draw, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 

@@ -22,7 +22,7 @@ Ongaro & Ousterhout, Figure 2's persistent-state fields. MIT 6.5840 Lab 3C (Pers
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`), each simulating a crash-and-restart of one or more servers mid-replication - every restarted server recovers exactly its pre-crash persisted state and never re-votes in a term it already decided, across every seed in both sets. All crash/restart simulation is confined to `turmoil`'s in-process simulation, never a real process or real disk path.
+- **Deterministic tier:** `cargo test` green across the practice set and the grading draw (see `docs/workshop-design.md`), each simulating a crash-and-restart of one or more servers mid-replication - every restarted server recovers exactly its pre-crash persisted state and never re-votes in a term it already decided, across every drawn seed. All crash/restart simulation is confined to `turmoil`'s in-process simulation, never a real process or real disk path.
 - **Conceptual tier (Coachgremlin):** confirms the persisted state is the *minimal* correct set (Figure 2), not over-broad in a way that happens to survive every practice seed but would break under a fault the seed set didn't happen to hit.
 
 ## Takeaway
@@ -31,7 +31,7 @@ A "what actually needs to survive a crash" checklist - generalizable well beyond
 
 ## Stop condition (placeholder)
 
-The learner's implementation passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's implementation passes the deterministic tier across the practice set and the grading draw, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 

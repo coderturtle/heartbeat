@@ -22,7 +22,7 @@ MIT 6.5840 Lab 4 (KV Raft), Parts A and B+C, as the *shape* to anchor to - `Chec
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`), each simulating a leader failover mid-request - the `Checkout` service stays linearizable across every seed: no client ever observes a granted lease disappear, nor a denied checkout silently become granted.
+- **Deterministic tier:** `cargo test` green across the practice set and the grading draw (see `docs/workshop-design.md`), each simulating a leader failover mid-request - the `Checkout` service stays linearizable across every seed: no client ever observes a granted lease disappear, nor a denied checkout silently become granted.
 - **Conceptual tier (Coachgremlin):** confirms the learner can correctly attribute a failing test to `Checkout`'s own logic, the Raft layer, or the integration boundary, and explain the reasoning - not just that they eventually found the bug by trial and error.
 
 ## Takeaway
@@ -31,7 +31,7 @@ A layering playbook: how to keep a service's API and its consensus layer indepen
 
 ## Stop condition (placeholder)
 
-The learner's implementation passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's implementation passes the deterministic tier across the practice set and the grading draw, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 

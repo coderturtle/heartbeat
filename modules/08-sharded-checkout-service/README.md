@@ -21,7 +21,7 @@ MIT 6.5840 Lab 5 (Sharded KV), Parts A and B+C+D, as the *shape* to anchor to - 
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`), each simulating a shard migration in progress combined with a partition on the source or destination replica group - no seed in either set ever leaves a resource owned by zero or two groups at once.
+- **Deterministic tier:** `cargo test` green across the practice set and the grading draw (see `docs/workshop-design.md`), each simulating a shard migration in progress combined with a partition on the source or destination replica group - no seed in either set ever leaves a resource owned by zero or two groups at once.
 - **Conceptual tier (Coachgremlin):** confirms the learner's migration protocol has an explicit, defensible answer for "who owns this resource right now" at every point during a handoff, not just at the start and end states.
 
 ## Takeaway
@@ -30,7 +30,7 @@ A shard-rebalancing/ownership-handoff checklist: the specific invariants to chec
 
 ## Stop condition (placeholder)
 
-The learner's implementation passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's implementation passes the deterministic tier across the practice set and the grading draw, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 **Open question, not resolved by this design pass (see `docs/workshop-design.md`):** whether `turmoil` alone is sufficient to simulate this module's fault scenarios, or whether `madsim`'s stronger determinism guarantees are needed here specifically. Decided during content-building, not at skeleton stage.
 

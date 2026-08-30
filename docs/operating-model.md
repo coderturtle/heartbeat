@@ -49,5 +49,5 @@ Cross-workshop shared surfaces (the `astro`/`@astrojs/*` pin in `site/`, the Ast
 
 ## Known Issues
 
-See `docs/completion-roadmap.md` for the full, current list of open structural questions (the held-out-seed grading model's trust-boundary contradiction, the cumulative-reference-implementation question, the learner-resume-path question) — not duplicated here to avoid two copies drifting apart.
+See `docs/completion-roadmap.md` for the full, current list of open structural questions (the cumulative-reference-implementation question, the learner-resume-path question) — not duplicated here to avoid two copies drifting apart. The held-out-seed grading model's trust-boundary contradiction (Phase A.8) is resolved — see `docs/workshop-design.md`'s deterministic-gate section, point 2.
 
