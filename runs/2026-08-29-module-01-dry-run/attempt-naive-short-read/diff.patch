@@ -1,0 +1,35 @@
+--- /tmp/rpc.rs.stub-backup	2026-08-29 15:00:45
++++ /tmp/checkout-dry-run/attempt-naive-short-read/src/rpc.rs	2026-08-29 15:04:31
+@@ -46,7 +46,8 @@
+ where
+     S: AsyncRead + AsyncWrite + Unpin,
+ {
+-    todo!("implement per this file's doc comments and tests/module_01_rpc_harness.rs")
++    write_framed(stream, request).await?;
++    read_framed(stream).await
+ }
+ 
+ /// Read exactly one request from `stream`, compute a response by calling
+@@ -64,7 +65,9 @@
+ where
+     S: AsyncRead + AsyncWrite + Unpin,
+ {
+-    todo!("implement per this file's doc comments and tests/module_01_rpc_harness.rs")
++    let request: CheckoutRequest = read_framed(stream).await?;
++    let response = handler(request);
++    write_framed(stream, &response).await
+ }
+ 
+ /// Write `value` to `stream` as a length-prefixed JSON frame: a 4-byte
+@@ -96,9 +99,9 @@
+     T: for<'de> Deserialize<'de>,
+ {
+     let mut len_buf = [0u8; 4];
+-    stream.read_exact(&mut len_buf).await?;
++    stream.read(&mut len_buf).await?;
+     let len = u32::from_be_bytes(len_buf) as usize;
+     let mut body = vec![0u8; len];
+-    stream.read_exact(&mut body).await?;
++    stream.read(&mut body).await?;
+     serde_json::from_slice(&body).map_err(std::io::Error::other)
+ }
