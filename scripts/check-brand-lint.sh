@@ -80,6 +80,40 @@ else
   [[ "$VIOLATIONS" -eq 0 ]] && ok "no banned phrases in published content"
 fi
 
+# Status-callout drift (added 2026-08-30, docs/completion-roadmap.md housekeeping
+# item): README.md and modules/README.md both state which module is the
+# highest-numbered one with real content ("Module NN is real"). A module
+# directory's own README either has a "Skeleton only" closing banner or it
+# doesn't - drift is when those two sources of truth disagree about which
+# module that highest-real number actually is. Warn-only, like the rest of
+# this script's other checks.
+echo ""
+echo "-- Status-callout drift -------------------------------------------------"
+if [[ -d modules ]]; then
+  HIGHEST_REAL=0
+  for d in modules/*/; do
+    [[ -f "$d/README.md" ]] || continue
+    num="$(basename "$d" | grep -oE '^[0-9]+' || true)"
+    [[ -z "$num" ]] && continue
+    if ! grep -q "Skeleton only" "$d/README.md"; then
+      num_int=$((10#$num))
+      [[ "$num_int" -gt "$HIGHEST_REAL" ]] && HIGHEST_REAL=$num_int
+    fi
+  done
+  EXPECTED="Module $(printf '%02d' "$HIGHEST_REAL") is real"
+  DRIFT=0
+  for f in README.md modules/README.md; do
+    [[ -f "$f" ]] || continue
+    if ! grep -qEi "module[[:space:],\`\[]*0*$HIGHEST_REAL([^0-9]|\$)" "$f"; then
+      warn "$f doesn't mention Module $(printf '%02d' "$HIGHEST_REAL") as the highest real module (modules/ says $HIGHEST_REAL module(s) lack the 'Skeleton only' banner) - update its status callout"
+      DRIFT=1
+    fi
+  done
+  [[ "$DRIFT" -eq 0 ]] && ok "status callouts agree: Module $(printf '%02d' "$HIGHEST_REAL") is the highest real module"
+else
+  ok "no modules/ directory yet"
+fi
+
 echo ""
 if [[ "$VIOLATIONS" -eq 0 ]]; then
   echo "Brand lint clean."
