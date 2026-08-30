@@ -24,7 +24,7 @@ MIT 6.5840 Lab 2 (Key/Value Server) as the *shape* to anchor to - deliberately u
 
 ## Required gate (placeholder - shape decided now, real rubric written later)
 
-- **Deterministic tier:** `cargo test` green across both `turmoil` seed sets (practice and held-out, see `docs/workshop-design.md`) - concurrent checkout requests against the single-node service, under injected latency and reordering, never grant the same resource to two holders at once, and every lease correctly expires and becomes available again, across every seed in both sets.
+- **Deterministic tier:** `cargo test` green across the practice set and the grading draw (see `docs/workshop-design.md`) - concurrent checkout requests against the single-node service, under injected latency and reordering, never grant the same resource to two holders at once, and every lease correctly expires and becomes available again, across every drawn seed.
 - **Conceptual tier (Coachgremlin):** confirms the interface design itself (not just this implementation) would still make sense once a caller can't assume a single in-process server - i.e., the API doesn't quietly bake in single-node assumptions Module 07 will have to unwind, and lease-expiry timing doesn't secretly depend on wall-clock behavior this service won't have once it's replicated.
 
 ## Takeaway
@@ -33,7 +33,7 @@ An exclusive-ownership API checklist: idempotent checkout requests, renewal-vs-r
 
 ## Stop condition (placeholder)
 
-The learner's `Checkout` service passes the deterministic tier across both the practice and held-out seed sets, and Coachgremlin confirms the conceptual tier, per the gate above.
+The learner's `Checkout` service passes the deterministic tier across the practice set and the grading draw, and Coachgremlin confirms the conceptual tier, per the gate above.
 
 ---
 
