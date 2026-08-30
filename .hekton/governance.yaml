@@ -40,3 +40,17 @@ agent_defaults:
   update_session_log_for_material_changes: true
   prefer_dry_run_before_mutation: true
   never_commit_secrets: true
+
+# Coachgremlin Workflow step 0 (<hekton-machinery>/gremlins/coaching/coachgremlin.md):
+# for a shared-throughline-project workshop, a later module's feature can silently
+# change or break an earlier module's already-shipped exercise or rubric. Run
+# scripts/arb-trigger-check.sh before starting work on any pending change to these
+# files. Added 2026-08-30 (docs/completion-roadmap.md finding C) - this gate was
+# missing even though Checkout makes heartbeat exactly the workshop shape it exists for.
+arb_review_triggers:
+  - pattern: "fixtures/checkout/src/rpc.rs"
+    reason: "Checkout's RPC message shapes/exchange functions changed - a later module's feature could silently break Module 01's already-shipped exercise or rubric"
+    review_type: governance
+  - pattern: "fixtures/checkout/src/lib.rs"
+    reason: "Checkout's crate-level module structure changed - every module README that cites a file path within it may now be stale"
+    review_type: governance

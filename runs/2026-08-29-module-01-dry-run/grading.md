@@ -50,3 +50,10 @@ Packaged: a `turmoil`-based network-fault-injection harness template (`fixtures/
 **Isn't:** evidence that `turmoil`'s fault injection is weak in general - only that this specific bug shape (a short read within message sizes this dry run tried) isn't one of the fault classes `latency`/`tcp_capacity` reliably exercise. A different bug shape (e.g. this module's own partition/dropped-connection tests) is exactly the kind of thing `turmoil` *did* catch correctly on both attempts (both attempts pass those tests identically, correctly, since the bug is orthogonal to partition handling).
 
 **Isn't:** a new, independent data point toward Coachgremlin's 3-run Review Trigger (that bar counts distinct workshops, not modules within one) - but it is real, first-time evidence for *this* workshop's own two-tier design actually working end to end on real code, not just design-doc prose.
+
+## Addendum, 2026-08-30: `partition_surfaces_as_an_error_not_a_hang` was itself vacuous
+
+Found via a three-agent review chain (`docs/completion-roadmap.md`, finding A) while planning Module 02's authoring: this test's original version only called `TcpStream::connect` under a standing partition, never `send_request` - meaning it passed identically against a completely unimplemented `todo!()` solution, with zero code written. It was testing `turmoil`'s own connection-establishment behavior under partition, not this module's exercise at all.
+
+Fixed by connecting *before* partitioning (so the connection itself starts healthy), then partitioning and sending a real request through `send_request`. Re-verified against all three states: fails on the stub (5/5 tests fail, correctly), passes on `attempt-good` (5/5 pass), and reproduces the original clippy finding unchanged on `attempt-naive-short-read` (5/5 `cargo test` pass, `cargo clippy` still catches the `unused_io_amount` violation identically). The module's real finding stands; only this one test's own soundness needed fixing.
+

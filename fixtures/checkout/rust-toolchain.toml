@@ -1,0 +1,16 @@
+# Pinned per docs/workshop-design.md point 10: full reproducibility depends on
+# the Rust toolchain version, not just Cargo.lock. Module 01's own real dry-run
+# finding (cargo clippy's unused_io_amount catching a bug cargo test missed) is
+# a toolchain-versioned lint behavior - nothing enforced that before this file
+# existed (docs/completion-roadmap.md finding B).
+#
+# This is a rustup convention: rustup's cargo/rustc shims read this file and
+# auto-switch to the pinned channel. The README's own prerequisites already
+# assume rustup, so this takes effect for a real learner. Honesty note: this
+# machine's Rust is a direct Homebrew install (no rustup), so this pin has no
+# effect in this authoring environment and its effect on a rustup-managed
+# install has not been locally verified - only that the crate still builds
+# fine with the file present.
+[toolchain]
+channel = "1.96.1"
+components = ["clippy"]

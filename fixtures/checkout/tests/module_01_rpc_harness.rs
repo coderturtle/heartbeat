@@ -91,6 +91,16 @@ fn exchange_survives_injected_latency() {
 /// A partition that never heals during the exchange must surface as a
 /// connection error the caller can observe, never a silent hang - across
 /// every seed.
+///
+/// Corrected 2026-08-30 (`docs/completion-roadmap.md` finding A): the
+/// original version of this test only called `TcpStream::connect` under a
+/// standing partition, and never called `send_request` at all - it tested
+/// turmoil's own connection-establishment behavior under partition, not
+/// anything about this module's exercise. It passed identically against a
+/// completely unimplemented `todo!()` solution. This version connects
+/// *before* partitioning (so the connection itself is healthy), then
+/// partitions and sends a real request through `send_request` - the
+/// function this test exists to gate.
 #[test]
 fn partition_surfaces_as_an_error_not_a_hang() {
     for &seed in SEEDS {
@@ -101,15 +111,16 @@ fn partition_surfaces_as_an_error_not_a_hang() {
         spawn_server(&mut sim);
 
         sim.client("client", async {
+            let mut stream = TcpStream::connect("server:9000").await?;
             turmoil::partition("client", "server");
-            let connect = tokio::time::timeout(
+            let result = tokio::time::timeout(
                 Duration::from_secs(5),
-                TcpStream::connect("server:9000"),
+                send_request(&mut stream, &sample_request()),
             )
             .await;
             assert!(
-                connect.is_err() || connect.unwrap().is_err(),
-                "connecting across a standing partition should time out or fail, not silently succeed"
+                matches!(result, Ok(Err(_))) || result.is_err(),
+                "a request sent across a partition that never heals should surface as an error, not hang or silently succeed"
             );
             Ok(())
         });
