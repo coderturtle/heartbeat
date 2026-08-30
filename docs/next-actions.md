@@ -17,14 +17,14 @@ The lists that used to live in "This Week" and "Later" below are superseded by *
 ## This Week (Phase A of `docs/completion-roadmap.md`)
 
 - [x] Author Module 01 (Coachgremlin's first real content-building pass): exercise, test suite, rubric, and real dry run complete (`runs/2026-08-29-module-01-dry-run/`)
-- [ ] Fix `partition_surfaces_as_an_error_not_a_hang` — currently vacuous, passes against unimplemented `todo!()` stubs (roadmap finding A)
-- [ ] Add `rust-toolchain.toml` to `fixtures/checkout/` (roadmap finding B)
-- [ ] Fix `AGENTS.md`'s broken contributor setup instructions — points at a `scripts/verify-project.sh` that doesn't exist in a fresh public clone (roadmap finding F)
-- [ ] Wire the Coachgremlin ARB structural-regression gate — port `borrow-native/scripts/arb-trigger-check.sh`, add `arb_review_triggers` to `.hekton/governance.yaml` (roadmap finding C)
+- [x] Fix `partition_surfaces_as_an_error_not_a_hang` — was vacuous, passed against unimplemented `todo!()` stubs (roadmap finding A); fixed and re-verified against all three known implementation states, see `runs/2026-08-29-module-01-dry-run/grading.md`'s 2026-08-30 addendum
+- [x] Add `rust-toolchain.toml` to `fixtures/checkout/` (roadmap finding B)
+- [x] Fix `AGENTS.md`'s broken contributor setup instructions (roadmap finding F)
+- [x] Wire the Coachgremlin ARB structural-regression gate — `scripts/arb-trigger-check.sh` ported, `arb_review_triggers` added to `.hekton/governance.yaml` (roadmap finding C)
 - [ ] Decide the held-out-seed question for real (roadmap Phase A.8: rename "held-out" honestly, replace secrecy with a published seed generator + draw-count floor) — run one DDD cycle first
-- [ ] Add a Rust CI workflow (`cargo test` + `cargo clippy --tests -- -D warnings`) — none exists yet
+- [x] Add a Rust CI workflow — `.github/workflows/rust-ci.yml` (cargo test/clippy/audit on the pinned toolchain), merged via PR #13. **Found and fixed a real `git-guardrail.sh` gap along the way**: combined `git add`+`git commit` in one Bash call bypassed the protected-path and secret-pattern checks entirely (architecturally distinct from the earlier manifest-regex bug) — see `docs/decisions.md`'s 2026-08-30 entry and memory `git_guardrail_add_commit_timing_fix`
 - [ ] **Human-confirmed first live GitHub Pages deploy** — blocks nothing, real content exists to publish already
-- [ ] Housekeeping: delete `docs/next-actions.md.bak.20260829030323`; move status-callout drift checking into `check-brand-lint.sh` (tracked), not `check-mirror-drift.sh` (gitignored, wrong purpose); write the auto-merge default into `docs/operating-model.md` (currently an empty template)
+- [x] Housekeeping: status-callout drift check added to `check-brand-lint.sh`; auto-merge policy written into `docs/operating-model.md`
 
 ## Later (Phases B-G of `docs/completion-roadmap.md`)
 
