@@ -1,0 +1,57 @@
+name: Rust CI
+
+# docs/completion-roadmap.md Phase A: there was no CI running cargo test/
+# clippy on the fixtures crate at all before this workflow. Runs on the
+# pinned toolchain (fixtures/checkout/rust-toolchain.toml) so this is the
+# same reproducible check a learner's own harness runs, not a separate one.
+# GitHub Actions execution itself is unverified until a human triggers it
+# by pushing this workflow - same discipline as this repo's own
+# deploy-pages.yml note.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "fixtures/checkout/**"
+      - ".github/workflows/rust-ci.yml"
+  pull_request:
+    paths:
+      - "fixtures/checkout/**"
+      - ".github/workflows/rust-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fixtures/checkout
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pinned Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Explicit, not auto-detected: `defaults.run.working-directory`
+          # above only affects shell `run:` steps, not necessarily where a
+          # third-party action looks for rust-toolchain.toml - rather than
+          # assume that behavior (unverified, since GitHub Actions execution
+          # itself can't be tested locally), the version is spelled out here
+          # to match fixtures/checkout/rust-toolchain.toml exactly. Keep both
+          # in sync by hand until this workflow's first real run is checked.
+          toolchain: "1.96.1"
+          components: clippy
+
+      - name: cargo test
+        run: cargo test --all-targets
+
+      - name: cargo clippy
+        run: cargo clippy --tests -- -D warnings
+
+      - name: cargo audit
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: fixtures/checkout
