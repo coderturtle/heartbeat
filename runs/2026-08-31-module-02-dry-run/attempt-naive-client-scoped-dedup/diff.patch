@@ -1,78 +1,244 @@
---- /tmp/checkout-stub-backup.rs	2026-08-31 07:21:54
-+++ /private/tmp/claude-502/-Users-hekton-Development-hekton-factory-output/767338e2-c049-4331-a1f6-e090cc707901/scratchpad/module02-dry-run/attempt-naive/src/checkout.rs	2026-08-31 07:25:49
-@@ -105,12 +105,30 @@
+--- fixtures/checkout/src/checkout.rs	2026-08-31 10:01:42
++++ /private/tmp/claude-502/-Users-hekton-Development-hekton-factory-output/767338e2-c049-4331-a1f6-e090cc707901/scratchpad/module02-dry-run-v2/attempt-naive/src/checkout.rs	2026-08-31 09:45:04
+@@ -8,20 +8,11 @@
+ //! 01's `rpc::CheckoutRequest`/`CheckoutResponse` in place - those already
+ //! shipped as graded exercise content, and the properties below (generation
+ //! fencing, per-resource dedup, a capped lease duration) don't fit that
+-//! narrower shape anyway. `Serialize`/`Deserialize` are derived on every
+-//! public request/response/status type now (`Request`, `CheckoutOp`,
+-//! `Response`, `DenyReason`, `StatusInfo`, `HeldInfo`), even though nothing
+-//! in this module sends them over a wire - Module 07 replicates this exact
+-//! call shape through a Raft log later, `Status` included (the governing
+-//! design permits routing a read through the log as an alternative to a
+-//! separate read-index protocol), and a type that can't serialize would
+-//! force a change to this already-graded file at that point. This module's
+-//! own snapshot/compaction story (what Module 07's own persistence layer
+-//! must be able to export and restore to keep a resource's generation
+-//! counter alive across a restart) is that module's job to build, not
+-//! this one's - this module's job is making sure the underlying invariant
+-//! (the generation counter itself genuinely persists, independent of any
+-//! active lease) is real and tested now, which it is.
++//! narrower shape anyway. `Serialize`/`Deserialize` are derived on the
++//! request/response types now, even though nothing in this module sends
++//! them over a wire - Module 07 replicates this exact call shape through a
++//! Raft log later, and a type that can't serialize would force a change to
++//! this already-graded file at that point.
+ //!
+ //! `CheckoutService::handle`/`status`/`canonicalize` are stubbed below
+ //! (`todo!`). Implement them against the provided test suite
+@@ -34,22 +25,7 @@
+ //! read at all, but a timestamp a Raft leader already committed into the
+ //! log entry being applied. A single-node caller (this module's own test
+ //! suite included) just passes its own clock's current reading at each
+-//! call site instead. Neither function checks that `now_ms` is
+-//! non-decreasing across calls - this service trusts its caller for that,
+-//! the same way it trusts a single-node caller not to call it from two
+-//! threads with wildly different clocks; a caller with its own real
+-//! ordering guarantee (a replicated log applying entries in order, in a
+-//! later module) gets this for free, but nothing here enforces it in
+-//! isolation.
+-//!
+-//! `client_id` is a dedup-scoping key only - it is never checked as an
+-//! authorization credential. `Renew`/`Return` are authorized purely by
+-//! `(holder, generation)` matching the resource's current lease; the
+-//! `client_id` on that same request can be anything, including a different
+-//! `client_id` than the one that originally called `Checkout`. This is
+-//! deliberate (a lease's bearer is whoever holds `holder`+`generation`, not
+-//! whoever happened to dial in the original request), not an oversight -
+-//! stated explicitly here because it's easy to assume otherwise.
++//! call site instead.
+ 
+ use std::collections::HashMap;
+ use std::sync::Mutex;
+@@ -103,25 +79,16 @@
+ 
+ #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+ pub enum DenyReason {
+-    /// The resource is currently held, under an unexpired lease, by anyone,
+-    /// deliberately not named `HeldByOther`: this is also the response to
+-    /// a caller re-`Checkout`-ing a resource *they themselves* already hold
+-    /// under a *new* request (a different `sequence`), since a caller who
+-    /// wants to keep an existing lease alive calls `Renew`, not a fresh
+-    /// `Checkout`. This service does not special-case "checking out
++    /// The resource is currently held, under an unexpired lease, by someone else.
++    /// Also the response to a caller re-`Checkout`-ing a resource they
++    /// already hold under a *new* request (a different `sequence`) - a
++    /// caller who wants to keep an existing lease alive calls `Renew`, not
++    /// a fresh `Checkout`; this service does not special-case "checking out
+     /// something you already hold" as anything other than "still held."
+     Held,
+-    /// The caller's `(holder, generation)` pair doesn't authorize acting on
+-    /// the resource's current lease - a fencing rejection covering two
+-    /// distinct cases deliberately folded into one reason, not two: the
+-    /// generation itself doesn't match (a stale command against an
+-    /// already-superseded lease), or the generation matches but the
+-    /// supplied `holder` doesn't (an unreachable case if generations are
+-    /// only ever handed to the caller that requested them, but treated as
+-    /// a fencing violation rather than assumed impossible). Both describe
+-    /// the same underlying fact - the caller doesn't hold the authority
+-    /// over this lease it's claiming to - so neither `Renew` nor `Return`
+-    /// distinguishes them further.
++    /// The caller's generation doesn't match the resource's current lease -
++    /// a fencing rejection: a stale command against an already-superseded
++    /// lease must never be honored.
+     StaleGeneration,
+     /// `Renew`/`Return` against a resource with no active lease matching the
+     /// caller's holder - either it already expired, was already returned,
+@@ -159,30 +126,29 @@
      pub expires_at_ms: u64,
  }
  
-+struct ResourceState {
-+    last_issued_generation: u64,
+-// The three private structs below are illustrative placeholders, not a
+-// prescribed layout - reshape them however `handle`/`status` actually need
+-// (in particular, `ResourceState::active` as written can't hold anything
+-// resembling a real lease; that's intentional, not a hint about the
+-// intended shape).
+ struct ResourceState {
+-    #[allow(dead_code)]
+     last_issued_generation: u64,
+-    #[allow(dead_code)]
+-    active: Option<()>,
 +    active: Option<ActiveLease>,
-+}
-+
+ }
+ 
 +struct ActiveLease {
 +    holder: String,
 +    generation: u64,
 +    expires_at_ms: u64,
 +}
 +
-+struct DedupEntry {
-+    sequence: u64,
-+    response: Response,
-+}
-+
- pub struct CheckoutService<C: Clock> {
-     clock: C,
+ struct DedupEntry {
 -    #[allow(dead_code)]
--    resources: Mutex<HashMap<String, ()>>,
+     sequence: u64,
 -    #[allow(dead_code)]
--    dedup: Mutex<HashMap<(String, String), ()>>,
-+    resources: Mutex<HashMap<String, ResourceState>>,
+     response: Response,
+ }
+ 
+ struct ServiceState {
+-    #[allow(dead_code)]
+     resources: HashMap<String, ResourceState>,
+-    #[allow(dead_code)]
+-    dedup: HashMap<(String, String), DedupEntry>,
 +    // A plausible, honest mistake: keyed by client_id alone. A single
 +    // client with only ever one outstanding resource at a time would never
 +    // notice - this only breaks once the same client holds two concurrent
 +    // leases and renews both.
-+    dedup: Mutex<HashMap<String, DedupEntry>>,
++    dedup: HashMap<String, DedupEntry>,
  }
  
- impl<C: Clock> CheckoutService<C> {
-@@ -138,7 +156,7 @@
+ /// A single `Mutex` guarding *all* of this service's state, locked once for
+@@ -193,13 +159,12 @@
+ /// retries both slip past the dedup check and both execute for real
+ /// (found the hard way, via this module's own dry run: a `Checkout`
+ /// retried concurrently could come back `Granted` on one thread and
+-/// `Denied(Held)` on the other, with whichever `dedup` write lands last
+-/// permanently overwriting the cached outcome for the one that actually
+-/// holds the lease). One lock, held across the whole operation, is what
+-/// makes "check the cache, do the work, update the cache" atomic with
+-/// respect to any other concurrent call for the same key.
++/// `Denied(Held)` on the other, with whichever `dedup` write lands
++/// last permanently overwriting the cached outcome for the one that
++/// actually holds the lease). One lock, held across the whole operation,
++/// is what makes "check the cache, do the work, update the cache" atomic
++/// with respect to any other concurrent call for the same key.
+ pub struct CheckoutService {
+-    #[allow(dead_code)]
+     state: Mutex<ServiceState>,
+ }
+ 
+@@ -213,24 +178,21 @@
+         }
+     }
+ 
+-    /// Canonicalizes an identifier once, at this API boundary - every
+-    /// exclusivity/dedup/generation lookup downstream must use this same
+-    /// canonical value, never a re-parsed one. Without this, two callers
+-    /// naming the same resource two different ways could bypass the lock
+-    /// entirely by appearing to hold two different resources. This applies
+-    /// to *both halves* of the dedup key, `resource` and `client_id` alike:
+-    /// a retry whose `client_id` or `resource` string happens to be spelled
+-    /// with different surrounding whitespace than the original call must
+-    /// still be recognized as the same `(client_id, resource)` pair.
+-    /// `holder` is deliberately not canonicalized anywhere in this service,
+-    /// since it's compared as an opaque bearer credential, not a
+-    /// human-facing name that needs normalizing.
++    /// Canonicalizes a resource identifier once, at this API boundary -
++    /// every exclusivity/dedup/generation lookup downstream must use this
++    /// same canonical value, never a re-parsed one. Without this, two
++    /// callers naming the same resource two different ways could bypass
++    /// the lock entirely by appearing to hold two different resources.
++    /// This applies equally to the dedup key - a retry whose resource
++    /// string happens to be spelled with different surrounding whitespace
++    /// than the original call must still be recognized as the same
++    /// `(client_id, resource)` pair.
+     ///
+     /// Required behavior (see the test suite for the exact checks): at
      /// minimum, leading/trailing whitespace must not create two identities
-     /// for the same resource.
+-    /// for the same string.
++    /// for the same resource.
      pub fn canonicalize(resource: &str) -> String {
 -        todo!("implement per this file's doc comments and tests/module_02_checkout_service.rs")
 +        resource.trim().to_string()
      }
  
      /// Handles one `Checkout`/`Renew`/`Return` request - the single entry
-@@ -175,7 +193,37 @@
-     ///   while must still be correctly reported as expired the next time
-     ///   anything asks, `status` included.
-     pub fn handle(&self, request: &Request) -> Response {
+@@ -241,12 +203,8 @@
+     /// consensus protocol can propose and apply uniformly.
+     ///
+     /// `now_ms` is supplied by the caller, not read from any clock this
+-    /// service owns, or any other ambient source - given the same
+-    /// `request`, `now_ms`, and prior sequence of committed calls, the
+-    /// result must always be the same (dedup's own cached-outcome replay
+-    /// depends on exactly this: the accumulated state this function itself
+-    /// builds up is a legitimate input to its own next call, a hidden
+-    /// clock or source of randomness is not).
++    /// service owns - this function's output must be a pure, deterministic
++    /// function of `request` and `now_ms` alone.
+     ///
+     /// Required behavior (see the test suite for the exact checks):
+     /// - The dedup check, the operation itself, and recording the new
+@@ -265,7 +223,7 @@
+     /// - `Checkout` grants exclusive access if the resource has no active,
+     ///   unexpired lease (`expires_at_ms > now_ms`, strictly - a lease
+     ///   whose `expires_at_ms` exactly equals `now_ms` has lapsed);
+-    ///   otherwise denies `DenyReason::Held` - including when the caller
++    ///   otherwise denies `Held` - including when the caller
+     ///   already holds the resource themselves under a still-live lease
+     ///   and is attempting a fresh `Checkout` (not a `Renew`) against it. A
+     ///   granted lease gets a strictly higher generation than any
+@@ -294,7 +252,41 @@
+     ///   still be correctly reported as expired the next time anything
+     ///   asks, `status` included, using the exact same comparison.
+     pub fn handle(&self, request: &Request, now_ms: u64) -> Response {
 -        todo!("implement per this file's doc comments and tests/module_02_checkout_service.rs")
 +        let resource = Self::canonicalize(&request.resource);
-+        let dedup_key = request.client_id.clone();
++        let dedup_key = Self::canonicalize(&request.client_id);
 +
-+        {
-+            let dedup = self.dedup.lock().unwrap();
-+            if let Some(entry) = dedup.get(&dedup_key) {
-+                if entry.sequence == request.sequence {
-+                    return entry.response.clone();
-+                }
-+                if request.sequence < entry.sequence {
-+                    return Response::Denied(DenyReason::StaleSequence);
-+                }
++        // One lock, held for the entire operation - the dedup check, the
++        // actual mutation, and recording the new dedup entry are all one
++        // atomic unit with respect to any other concurrent call.
++        let mut state = self.state.lock().unwrap();
++
++        if let Some(entry) = state.dedup.get(&dedup_key) {
++            if entry.sequence == request.sequence {
++                return entry.response.clone();
++            }
++            if request.sequence < entry.sequence {
++                return Response::Denied(DenyReason::StaleSequence);
 +            }
 +        }
 +
-+        let now = self.clock.now_ms();
 +        let response = match &request.op {
-+            CheckoutOp::Checkout { holder, lease_duration_ms } => self.do_checkout(&resource, holder, *lease_duration_ms, now),
-+            CheckoutOp::Renew { holder, generation, lease_duration_ms } => self.do_renew(&resource, holder, *generation, *lease_duration_ms, now),
-+            CheckoutOp::Return { holder, generation } => self.do_return(&resource, holder, *generation),
++            CheckoutOp::Checkout { holder, lease_duration_ms } => {
++                Self::do_checkout(&mut state.resources, &resource, holder, *lease_duration_ms, now_ms)
++            }
++            CheckoutOp::Renew { holder, generation, lease_duration_ms } => {
++                Self::do_renew(&mut state.resources, &resource, holder, *generation, *lease_duration_ms, now_ms)
++            }
++            CheckoutOp::Return { holder, generation } => Self::do_return(&mut state.resources, &resource, holder, *generation, now_ms),
 +        };
 +
-+        let mut dedup = self.dedup.lock().unwrap();
-+        dedup.insert(
++        state.dedup.insert(
 +            dedup_key,
 +            DedupEntry {
 +                sequence: request.sequence,
@@ -83,20 +249,19 @@
      }
  
      /// A pure read: reports whether `resource` is *currently* held (its
-@@ -185,6 +233,92 @@
-     /// this call must independently re-derive the same expiry check for its
-     /// own report to be accurate, not trust whatever was last written.
-     pub fn status(&self, resource: &str) -> StatusInfo {
+@@ -308,8 +300,91 @@
+     /// an expired resource's entry on read) that `handle`'s own generation-
+     /// persistence requirement forbids.
+     pub fn status(&self, resource: &str, now_ms: u64) -> StatusInfo {
 -        todo!("implement per this file's doc comments and tests/module_02_checkout_service.rs")
 +        let resource = Self::canonicalize(resource);
-+        let now = self.clock.now_ms();
-+        let resources = self.resources.lock().unwrap();
-+        match resources.get(&resource) {
-+            Some(state) => {
-+                let held = state
++        let state = self.state.lock().unwrap();
++        match state.resources.get(&resource) {
++            Some(entry) => {
++                let held = entry
 +                    .active
 +                    .as_ref()
-+                    .filter(|active| active.expires_at_ms > now)
++                    .filter(|active| active.expires_at_ms > now_ms)
 +                    .map(|active| HeldInfo {
 +                        holder: active.holder.clone(),
 +                        generation: active.generation,
@@ -105,7 +270,7 @@
 +                StatusInfo {
 +                    resource,
 +                    held,
-+                    last_issued_generation: state.last_issued_generation,
++                    last_issued_generation: entry.last_issued_generation,
 +                }
 +            }
 +            None => StatusInfo {
@@ -116,23 +281,22 @@
 +        }
      }
 +
-+    fn do_checkout(&self, resource: &str, holder: &str, requested_duration_ms: u64, now: u64) -> Response {
++    fn do_checkout(resources: &mut HashMap<String, ResourceState>, resource: &str, holder: &str, requested_duration_ms: u64, now_ms: u64) -> Response {
 +        let duration_ms = requested_duration_ms.min(MAX_LEASE_DURATION_MS);
-+        let mut resources = self.resources.lock().unwrap();
 +        let state = resources.entry(resource.to_string()).or_insert_with(|| ResourceState {
 +            last_issued_generation: 0,
 +            active: None,
 +        });
 +
 +        if let Some(active) = &state.active {
-+            if active.expires_at_ms > now {
-+                return Response::Denied(DenyReason::HeldByOther);
++            if active.expires_at_ms > now_ms {
++                return Response::Denied(DenyReason::Held);
 +            }
 +        }
 +
 +        state.last_issued_generation += 1;
 +        let generation = state.last_issued_generation;
-+        let expires_at_ms = now + duration_ms;
++        let expires_at_ms = now_ms + duration_ms;
 +        state.active = Some(ActiveLease {
 +            holder: holder.to_string(),
 +            generation,
@@ -141,33 +305,32 @@
 +        Response::Granted { generation, expires_at_ms }
 +    }
 +
-+    fn do_renew(&self, resource: &str, holder: &str, generation: u64, requested_duration_ms: u64, now: u64) -> Response {
++    fn do_renew(resources: &mut HashMap<String, ResourceState>, resource: &str, holder: &str, generation: u64, requested_duration_ms: u64, now_ms: u64) -> Response {
 +        let duration_ms = requested_duration_ms.min(MAX_LEASE_DURATION_MS);
-+        let mut resources = self.resources.lock().unwrap();
 +        let Some(state) = resources.get_mut(resource) else {
 +            return Response::Denied(DenyReason::NotHeld);
 +        };
 +
 +        match &mut state.active {
 +            Some(active) if active.generation != generation => Response::Denied(DenyReason::StaleGeneration),
-+            Some(active) if active.expires_at_ms <= now => Response::Denied(DenyReason::NotHeld),
++            Some(active) if active.expires_at_ms <= now_ms => Response::Denied(DenyReason::NotHeld),
 +            Some(active) if active.holder != holder => Response::Denied(DenyReason::StaleGeneration),
 +            Some(active) => {
-+                active.expires_at_ms = now + duration_ms;
++                active.expires_at_ms = now_ms + duration_ms;
 +                Response::Granted { generation, expires_at_ms: active.expires_at_ms }
 +            }
 +            None => Response::Denied(DenyReason::NotHeld),
 +        }
 +    }
 +
-+    fn do_return(&self, resource: &str, holder: &str, generation: u64) -> Response {
-+        let mut resources = self.resources.lock().unwrap();
++    fn do_return(resources: &mut HashMap<String, ResourceState>, resource: &str, holder: &str, generation: u64, now_ms: u64) -> Response {
 +        let Some(state) = resources.get_mut(resource) else {
 +            return Response::Denied(DenyReason::NotHeld);
 +        };
 +
 +        match &state.active {
 +            Some(active) if active.generation != generation => Response::Denied(DenyReason::StaleGeneration),
++            Some(active) if active.expires_at_ms <= now_ms => Response::Denied(DenyReason::NotHeld),
 +            Some(active) if active.holder != holder => Response::Denied(DenyReason::StaleGeneration),
 +            Some(_) => {
 +                state.active = None;
@@ -177,3 +340,5 @@
 +        }
 +    }
  }
+ 
+ impl Default for CheckoutService {
