@@ -15,15 +15,25 @@
 //! design will not compile once spawned this way. Nothing in the test suite
 //! inspects your internal structure beyond that; it only observes behavior.
 //!
-//! **A real trap, not scaffolded away:** `transport::call_request_vote`/
-//! `call_append_entries`, and `connector.connect(..)` itself, have no
-//! built-in timeout, deliberately - wrap a call in `tokio::time::timeout(..)`
-//! yourself when you don't want one partitioned or slow peer to block your
-//! own progress. The specific failure this module's own test suite checks
-//! for: holding your state's lock across an outbound call. `turmoil`'s
-//! partition scenarios will deadlock a node built that way the first time a
-//! peer is cut off mid-connect-or-mid-RPC, and a majority of the *other*
-//! nodes must still elect a leader within a bounded window regardless.
+//! **A trap that's real in production, even though this simulated harness
+//! can't force it:** `transport::call_request_vote`/`call_append_entries`,
+//! and `connector.connect(..)` itself, have no built-in timeout,
+//! deliberately - wrap a call in `tokio::time::timeout(..)` yourself when you
+//! don't want one slow peer to block your own progress. Holding your state's
+//! lock across an outbound call is a real anti-pattern in any concurrent
+//! Rust service (it starves every inbound handler that needs the same lock
+//! for as long as the call takes), but `turmoil`'s own `partition` fails a
+//! *new* `connect(..)` attempt to an already-partitioned host immediately
+//! (confirmed empirically against this crate's pinned `turmoil` version -
+//! it does not hang), so this module's own test suite cannot force that
+//! specific failure mode into a visible liveness violation the way an
+//! unbounded real-world TCP connect to an unreachable host eventually would.
+//! Still worth doing correctly - a slow *established* connection, or a
+//! future turmoil version modeling partition differently, would expose the
+//! same bug - just not something this module's own gate can catch for you.
+//! What the test suite *does* verify under partition: a majority of the
+//! *other* nodes must still elect a leader within a bounded window,
+//! regardless of what an isolated node believes about its own leadership.
 //!
 //! **Two-phase construction.** [`new`](RaftNode::new) returns a plain,
 //! not-yet-running `Self` and must not spawn anything - nothing can yet hold

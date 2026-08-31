@@ -18,10 +18,10 @@
 //! `tokio::spawn` a call, or run several concurrently via `join_all`, without
 //! a `'static` lifetime problem either way. Neither function has a built-in
 //! timeout: wrap a call in `tokio::time::timeout(..)` yourself if you don't
-//! want one slow or partitioned peer to block your own progress - see
-//! `node.rs`'s module doc for why this is deliberately left to you, and note
-//! that under a partition it's `connector.connect(addr)` itself that hangs,
-//! not just the calls below.
+//! want one slow peer to block your own progress - see `node.rs`'s module doc
+//! for why this is deliberately left to you (and for a real caveat about what
+//! this crate's pinned `turmoil` version actually does to a fresh `connect(..)`
+//! against an already-partitioned host - not what you might expect).
 
 use super::types::{
     AppendEntriesArgs, AppendEntriesReply, InboundMessage, InboundReply, RequestVoteArgs,
