@@ -36,3 +36,10 @@ The lists that used to live in "This Week" and "Later" below are superseded by *
 - [ ] Phase F — madsim spike, then author Module 08
 - [ ] Phase G — author Module 09 (capstone), Review Panel run #4, final status sweep
 - [ ] Update `~/hekton/gremlins/workshop/workshop-gremlin.md`'s stale "agent-native manifest pilot, never built" claim — it was built and dry-run-verified in `terminal-velocity` on 2026-07-04; a factory-level fix independent of Heartbeat
+
+## Session Update: 2026-08-31 — Module 03 (Raft Leader Election) authored end-to-end; custom-domain deploy; workshop listing
+
+- [ ] Phase D continues with Modules 04-06
+- [ ] Workshop Review Panel run #2 now due (roadmap: after Module 03)
+- [ ] Spot-check heartbeat.coderturtle.io HTTPS enforcement flips to true
+- [ ] Module 04 needs a DDD pass on turmoil::hold's bidirectional-only constraint before authoring
