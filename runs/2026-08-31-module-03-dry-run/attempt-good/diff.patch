@@ -1,0 +1,414 @@
+--- fixtures/checkout/src/raft/node.rs	2026-08-31 20:41:48
++++ /private/tmp/claude-502/-Users-hekton-Development-hekton-factory-output/767338e2-c049-4331-a1f6-e090cc707901/scratchpad/module03-dry-run/attempt-good/src/raft/node.rs	2026-08-31 18:41:35
+@@ -1,104 +1,27 @@
+-//! Module 03: Raft Leader Election.
+-//!
+-//! Implement the `todo!()`s on `RaftNode` below. This module's fixed surface
+-//! (`types`, `timer`, `connector`, `transport`) hides wire framing,
+-//! connection management, and timing constants - same as Module 01 already
+-//! proved the framing layer works. What's left, and what this module is
+-//! actually about: the Figure 2 election algorithm, and how you structure
+-//! concurrent access to your own node's state to make it correct under real,
+-//! unreliable timing.
+-//!
+-//! **You choose your own interior-mutability/synchronization strategy** - a
+-//! `Mutex<YourState>`, an `RwLock`, or a channel-fed actor task are all fine.
+-//! Background work is spawned via `tokio::spawn` (not `spawn_local`), so
+-//! anything it touches must be `Send + 'static` - an `Rc<RefCell<_>>`-based
+-//! design will not compile once spawned this way. Nothing in the test suite
+-//! inspects your internal structure beyond that; it only observes behavior.
+-//!
+-//! **A real trap, forceable a specific way, not the way you'd first guess:**
+-//! `transport::call_request_vote`/`call_append_entries`, and
+-//! `connector.connect(..)` itself, have no built-in timeout, deliberately -
+-//! wrap a call in `tokio::time::timeout(..)` yourself when you don't want
+-//! one slow peer to block your own progress. Holding your state's lock
+-//! across an outbound call is a real anti-pattern in any concurrent Rust
+-//! service (it starves every inbound handler that needs the same lock for
+-//! as long as the call takes). `turmoil`'s own `partition` fails a *new*
+-//! `connect(..)` attempt to an already-partitioned host immediately
+-//! (confirmed empirically against this crate's pinned `turmoil` version -
+-//! it does not hang) - so a partition firing *before* you dial a peer is not
+-//! what exposes this bug here. An *already-established* connection is
+-//! different: if a partition fires while your `call_append_entries` is
+-//! waiting on a reply that's now silently dropped, that read hangs for real,
+-//! since nothing in the provided transport times it out. Holding your lock
+-//! across that specific window is what this module's own liveness tests
+-//! can - and do - catch.
+-//! What the test suite *does* verify under partition: a majority of the
+-//! *other* nodes must still elect a leader within a bounded window,
+-//! regardless of what an isolated node believes about its own leadership.
+-//!
+-//! **Two-phase construction.** [`new`](RaftNode::new) returns a plain,
+-//! not-yet-running `Self` and must not spawn anything - nothing can yet hold
+-//! an `Arc` pointing back at it. The harness calls
+-//! `Arc::new(RaftNode::new(..))`, then calls [`start`](RaftNode::start) on
+-//! that `Arc`, and only *after* `start` returns does its own accept loop
+-//! begin serving inbound RPCs - so a channel-fed actor you spawn in `start`
+-//! is guaranteed a live consumer before any request can arrive. Construct
+-//! your actual Figure 2 state (`RoleState`, `voted_for`, `RaftLog`) either as
+-//! a field behind a `Mutex`/`RwLock` set up in `new` (reachable from both
+-//! `start` and the RPC handlers via `&self`), or as local variables owned
+-//! entirely by a task you spawn in `start` (an actor model, using a *clone*
+-//! of `self.transition_log` to construct your own `RoleState` inside that
+-//! task). Both `new` and `start` are (re-)invoked from inside the test
+-//! harness's own `sim.host(..)` factory closure - on every `sim.bounce()`,
+-//! not just once - so anything spawned outside that closure escapes
+-//! simulated time and determinism breaks wholesale. `start` returns its
+-//! spawned tasks' `JoinHandle`s so the harness can detect a panicked
+-//! background task instead of silently reading "no leader elected."
+-//!
+-//! **Determinism, beyond the obvious:** seed your own election-timeout
+-//! jitter from [`timer::rng_for_node`]/[`timer::next_election_timeout`] -
+-//! call `rng_for_node` once in `new`, store the result, never re-seed. Use
+-//! `tokio::time::{sleep, Instant, interval}`, never `std::time`/
+-//! `std::thread::sleep` - only the former is patched by `turmoil`. Note that
+-//! `tokio::time::interval`'s default `MissedTickBehavior::Burst` fires an
+-//! immediate first tick and can emit a catch-up burst after any stall - set
+-//! `MissedTickBehavior::Delay` if you use it for your heartbeat loop.
+-//! `peers` below is a `BTreeMap`, not a `HashMap` - never restructure it into
+-//! an unordered collection for anything you iterate during a run (this
+-//! project has hit exactly that nondeterminism bug before: identical seed,
+-//! different RPC dispatch order, different outcome). If you use
+-//! `tokio::select!` for your own event loop, put `biased;` first - its
+-//! default branch-polling order draws from a thread-local RNG `turmoil` does
+-//! not seed. The test suite runs the same seed twice and requires a
+-//! byte-identical `RoleTransitionEvent` sequence both times.
+-//!
+-//! **Your term/role live in [`RoleState`], not a field of your own** - route
+-//! every read and write through it (`self.role_state.term()`/`.role()`/
+-//! `.set(term, role)`), so a transition can't slip out unrecorded through a
+-//! separate, driftable copy of the same information. `RoleState` does not
+-//! own `voted_for`: advancing to a higher term must reset your own
+-//! `voted_for` to `None` in the same logical step, and `RoleState` won't do
+-//! that for you.
++//! Module 03: Raft Leader Election - reference implementation.
+ 
+ use super::connector::Connector;
+-use super::timer::{rng_for_node, DeterministicRng};
++use super::timer::{heartbeat_interval, next_election_timeout, rng_for_node, DeterministicRng};
++use super::transport::{call_append_entries, call_request_vote};
+ use super::types::{
+-    AppendEntriesArgs, AppendEntriesReply, NodeId, RequestVoteArgs, RequestVoteReply,
+-    TransitionLog,
++    AppendEntriesArgs, AppendEntriesReply, NodeId, RaftLog, RequestVoteArgs, RequestVoteReply,
++    Role, RoleState, TransitionLog,
+ };
+ use std::collections::BTreeMap;
+-use std::sync::Arc;
+-use tokio::task::JoinHandle;
++use std::sync::{Arc, Mutex};
++use std::time::Duration;
++use tokio::task::{JoinHandle, JoinSet};
++use tokio::time::Instant;
+ 
+-// You'll also need, once you use them: `super::types::{RaftLog, Role, RoleState}`
+-// and `super::timer::next_election_timeout` - not imported above since nothing
+-// in this unimplemented stub references them yet.
++struct NodeState {
++    role_state: RoleState,
++    voted_for: Option<NodeId>,
++    #[allow(dead_code)]
++    log: RaftLog,
++    last_reset: Instant,
++    current_election_timeout: Duration,
++}
+ 
+-/// Illustrative placeholder for your own internal state - not a prescribed
+-/// layout, same as Module 02's `ServiceState`. `role_state` (term/role) and
+-/// `log: RaftLog` (add this field yourself, behind whatever
+-/// interior-mutability wrapper you choose) are Figure 2's persistent/volatile
+-/// state.
+ #[allow(dead_code)]
+ pub struct RaftNode<C: Connector> {
+     id: NodeId,
+@@ -106,16 +29,10 @@
+     connector: C,
+     transition_log: TransitionLog,
+     rng: DeterministicRng,
+-    // Your own fields: role_state (behind a Mutex/RwLock, or owned entirely
+-    // by a task you spawn in `start`), voted_for, log: RaftLog, whatever else
+-    // you need.
++    state: Mutex<NodeState>,
+ }
+ 
+ impl<C: Connector> RaftNode<C> {
+-    /// Must not spawn anything - see this file's module doc on two-phase
+-    /// construction. Store `transition_log` and the RNG from `rng_for_node`
+-    /// as your own fields here; construct `RoleState`/`RaftLog` either here
+-    /// (behind a lock) or inside `start` (for an actor model).
+     pub fn new(
+         id: NodeId,
+         peers: BTreeMap<NodeId, String>,
+@@ -124,31 +41,261 @@
+         sim_seed: u64,
+     ) -> Self {
+         let rng = rng_for_node(sim_seed, id);
++        let state = Mutex::new(NodeState {
++            role_state: RoleState::new(transition_log.clone()),
++            voted_for: None,
++            log: RaftLog::new(),
++            last_reset: Instant::now(),
++            current_election_timeout: Duration::from_millis(super::timer::ELECTION_TIMEOUT_MAX_MS),
++        });
+         Self {
+             id,
+             peers,
+             connector,
+             transition_log,
+             rng,
++            state,
+         }
+     }
+ 
+-    /// Spawn your own background election-timeout task (and anything else
+-    /// that needs to run continuously) here, using a cloned `Arc<Self>` so it
+-    /// can call back into your own methods. Return every `JoinHandle` you
+-    /// create so the harness can retain them.
+     pub fn start(self: &Arc<Self>) -> Vec<JoinHandle<()>> {
+-        let _ = (&self.peers, &self.connector, &self.transition_log, self.rng);
+-        todo!("implement per this file's doc comments and tests/module_03_raft_election.rs")
++        let node = Arc::clone(self);
++        let handle = tokio::spawn(async move {
++            node.run_election_timer().await;
++        });
++        vec![handle]
+     }
+ 
++    async fn run_election_timer(self: Arc<Self>) {
++        let mut rng = self.rng;
++        {
++            let mut st = self.state.lock().unwrap();
++            st.current_election_timeout = next_election_timeout(&mut rng);
++            st.last_reset = Instant::now();
++        }
++        loop {
++            let deadline = {
++                let st = self.state.lock().unwrap();
++                st.last_reset + st.current_election_timeout
++            };
++            tokio::time::sleep_until(deadline).await;
++            let should_start_election = {
++                let st = self.state.lock().unwrap();
++                Instant::now() >= st.last_reset + st.current_election_timeout
++                    && st.role_state.role() != Role::Leader
++            };
++            if should_start_election {
++                self.start_election(&mut rng).await;
++            }
++        }
++    }
++
++    async fn start_election(&self, rng: &mut DeterministicRng) {
++        let (candidate_term, last_log_index, last_log_term) = {
++            let mut st = self.state.lock().unwrap();
++            let new_term = st.role_state.term() + 1;
++            st.role_state.set(new_term, Role::Candidate);
++            st.voted_for = Some(self.id);
++            st.last_reset = Instant::now();
++            st.current_election_timeout = next_election_timeout(rng);
++            (new_term, st.log.last_index(), st.log.last_term())
++        };
++
++        let args = RequestVoteArgs {
++            term: candidate_term,
++            candidate_id: self.id,
++            last_log_index,
++            last_log_term,
++        };
++
++        let total_nodes = self.peers.len() + 1;
++        let needed = total_nodes / 2 + 1;
++        let mut votes = 1u32;
++        if votes as usize >= needed {
++            self.become_leader_if_still_candidate(candidate_term);
++            self.run_as_leader(candidate_term).await;
++            return;
++        }
++
++        let mut join_set = JoinSet::new();
++        for (&peer_id, addr) in &self.peers {
++            let args = args.clone();
++            let connector = self.connector.clone();
++            let addr = addr.clone();
++            join_set.spawn(async move {
++                let stream = tokio::time::timeout(Duration::from_millis(800), connector.connect(addr))
++                    .await
++                    .ok()?
++                    .ok()?;
++                let reply = tokio::time::timeout(
++                    Duration::from_millis(800),
++                    call_request_vote(stream, &args),
++                )
++                .await
++                .ok()?
++                .ok()?;
++                Some((peer_id, reply))
++            });
++        }
++
++        while let Some(res) = join_set.join_next().await {
++            let Ok(Some((_peer_id, reply))) = res else {
++                continue;
++            };
++            enum Outcome {
++                Abandon,
++                Irrelevant,
++                BecameLeader,
++                Counted,
++            }
++            let outcome = {
++                let mut st = self.state.lock().unwrap();
++                if reply.term > st.role_state.term() {
++                    st.role_state.set(reply.term, Role::Follower);
++                    st.voted_for = None;
++                    st.last_reset = Instant::now();
++                    st.current_election_timeout = next_election_timeout(rng);
++                    Outcome::Abandon
++                } else if st.role_state.term() != candidate_term
++                    || st.role_state.role() != Role::Candidate
++                {
++                    Outcome::Irrelevant
++                } else if reply.vote_granted {
++                    votes += 1;
++                    if votes as usize >= needed {
++                        st.role_state.set(candidate_term, Role::Leader);
++                        Outcome::BecameLeader
++                    } else {
++                        Outcome::Counted
++                    }
++                } else {
++                    Outcome::Counted
++                }
++            };
++            match outcome {
++                Outcome::Abandon | Outcome::Irrelevant => return,
++                Outcome::BecameLeader => {
++                    self.run_as_leader(candidate_term).await;
++                    return;
++                }
++                Outcome::Counted => {}
++            }
++        }
++    }
++
++    fn become_leader_if_still_candidate(&self, term: u64) {
++        let mut st = self.state.lock().unwrap();
++        if st.role_state.term() == term {
++            st.role_state.set(term, Role::Leader);
++        }
++    }
++
++    async fn run_as_leader(&self, term: u64) {
++        loop {
++            {
++                let st = self.state.lock().unwrap();
++                if st.role_state.term() != term || st.role_state.role() != Role::Leader {
++                    return;
++                }
++            }
++            let args = AppendEntriesArgs {
++                term,
++                leader_id: self.id,
++                prev_log_index: 0,
++                prev_log_term: 0,
++                entries: vec![],
++                leader_commit: 0,
++            };
++            let mut join_set = JoinSet::new();
++            for (&_peer_id, addr) in &self.peers {
++                let args = args.clone();
++                let connector = self.connector.clone();
++                let addr = addr.clone();
++                join_set.spawn(async move {
++                    let stream =
++                        tokio::time::timeout(Duration::from_millis(300), connector.connect(addr))
++                            .await
++                            .ok()?
++                            .ok()?;
++                    let reply = tokio::time::timeout(
++                        Duration::from_millis(300),
++                        call_append_entries(stream, &args),
++                    )
++                    .await
++                    .ok()?
++                    .ok()?;
++                    Some(reply)
++                });
++            }
++            while let Some(res) = join_set.join_next().await {
++                let Ok(Some(reply)) = res else { continue };
++                let mut st = self.state.lock().unwrap();
++                if reply.term > st.role_state.term() {
++                    st.role_state.set(reply.term, Role::Follower);
++                    st.voted_for = None;
++                    st.last_reset = Instant::now();
++                    return;
++                }
++            }
++            tokio::time::sleep(heartbeat_interval()).await;
++        }
++    }
++
+     pub async fn handle_request_vote(&self, args: RequestVoteArgs) -> RequestVoteReply {
+-        let _ = args;
+-        todo!("implement per this file's doc comments and tests/module_03_raft_election.rs")
++        let mut st = self.state.lock().unwrap();
++        if args.term > st.role_state.term() {
++            st.role_state.set(args.term, Role::Follower);
++            st.voted_for = None;
++        }
++        if args.term < st.role_state.term() {
++            return RequestVoteReply {
++                term: st.role_state.term(),
++                vote_granted: false,
++            };
++        }
++        let log_ok = args.last_log_term > st.log.last_term()
++            || (args.last_log_term == st.log.last_term() && args.last_log_index >= st.log.last_index());
++        let can_vote = st.voted_for.is_none() || st.voted_for == Some(args.candidate_id);
++        if can_vote && log_ok {
++            st.voted_for = Some(args.candidate_id);
++            st.last_reset = Instant::now();
++            RequestVoteReply {
++                term: st.role_state.term(),
++                vote_granted: true,
++            }
++        } else {
++            RequestVoteReply {
++                term: st.role_state.term(),
++                vote_granted: false,
++            }
++        }
+     }
+ 
+     pub async fn handle_append_entries(&self, args: AppendEntriesArgs) -> AppendEntriesReply {
+-        let _ = args;
+-        todo!("implement per this file's doc comments and tests/module_03_raft_election.rs")
++        let mut st = self.state.lock().unwrap();
++        if args.term < st.role_state.term() {
++            return AppendEntriesReply {
++                term: st.role_state.term(),
++                success: false,
++            };
++        }
++        if args.term > st.role_state.term() {
++            st.role_state.set(args.term, Role::Follower);
++            st.voted_for = None;
++        } else if st.role_state.role() != Role::Follower {
++            st.role_state.set(args.term, Role::Follower);
++        }
++        st.last_reset = Instant::now();
++        let consistent = st.log.prev_term_for(args.prev_log_index) == Some(args.prev_log_term);
++        if !consistent {
++            return AppendEntriesReply {
++                term: st.role_state.term(),
++                success: false,
++            };
++        }
++        AppendEntriesReply {
++            term: st.role_state.term(),
++            success: true,
++        }
+     }
+ }
