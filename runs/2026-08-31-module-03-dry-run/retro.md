@@ -115,17 +115,74 @@ standalone probe of that tool's actual behavior first - this dry run's own
 value came partly from doing that after the fact; doing it before would
 have caught the same finding earlier and cheaper.
 
-## Go/no-go on Module 03
+## Go/no-go on Module 03 (dry run alone)
 
-**Go.** The fixture (post three DDD cycles) and test suite are real and
-internally consistent: a correct attempt passes all 5 tests stably across
-repeated runs, a real, honest wrong attempt fails exactly one gate
-criterion for an understood, verified-not-flaky reason, and the two
-findings this dry run's own process surfaced (a runtime-behavior claim that
-needed checking, and a test whose premise needed to track live state
-instead of a fixed id) are both fixed and documented, not glossed over.
-Doubt-driven-development on the fixture is still owed a decision: given the
-test suite is now real, whether to run a further review pass on the test
-suite itself (matching this project's own "content, then DDD" practice
-established for Module 02) - see `docs/decisions.md` for that decision once
-made.
+**Go, pending the test suite's own DDD pass, not before** - matching this
+retro's own prediction one section up that this workshop's dry-run-then-DDD
+pattern would likely recur here in some shape.
+
+## Addendum: a doubt-driven-development pass on the test suite found the same bug class recurring, one layer in
+
+A single-model adversarial review of the test suite - given the file and its
+governing contract, told explicitly not to extend courtesy to claims this
+retro had already "confirmed" - found six real, confirmed issues. See
+`grading.md`'s own addendum for the full list; the pattern worth naming here
+is what kind of bug each one was.
+
+**The most pointed finding recurred inside the exact test this retro's own
+first finding was about, one assertion downstream.** This retro's "second
+finding" above documented fixing the partition test's *scenario* (isolate
+the live leader, not a fixed id). The DDD pass found the test's *liveness
+assertion*, sitting right next to that fix, was independently vacuous for an
+unrelated reason: it checked for a leader anywhere in the whole merged
+history, which the pre-partition leader alone already satisfies before the
+partition is even applied. Two vacuousness bugs in the same test, found in
+two different passes, each real and each independently sufficient to make
+the test unable to fail. Worth stating plainly: fixing a test's premise does
+not imply its assertions were also checked with the same scrutiny - they are
+separate claims, and this retro's own first fix left the second one standing
+until a fresh reviewer looked at the artifact as a whole rather than at the
+specific line that had already been flagged once.
+
+**A second, structurally different finding: a contract requirement can have
+zero test coverage even in a suite that looks complete.** "Election-timeout
+jitter re-randomizes per attempt" is stated as a hard requirement in
+`timer.rs`'s own doc comment and was never once tested - not weakly tested,
+not indirectly implied, actually zero tests would have caught a learner
+copying `self.rng` fresh out of a `Copy`-derived field every election
+attempt, discarding the advanced state each time. This is a different
+failure mode from the vacuous-assertion pattern above: those tests *ran*
+and *could* fail, just not for the reason claimed; this requirement had no
+test running against it at all. Both are real gaps a fresh reviewer finds by
+asking different questions - "does this assertion actually prove what its
+name claims" versus "is every stated requirement backed by *some* test" -
+and this dry run's own process needed both questions asked before either
+surfaced.
+
+**A structural observation for future modules in this arc:** the
+`DeterministicRng: Copy` derive that makes the re-randomization bug easy to
+write by accident was a deliberate design choice from this module's own
+fixture-API-split DDD cycles (Copy was needed so the RNG could be read out
+of `&self`/`&Arc<Self>` without forcing interior mutability on every
+learner). A provided type's own ergonomic choice can create exactly the
+footgun its neighboring doc comment warns against - worth checking, for
+Module 04-06's own provided types, whether an ergonomic affordance and a
+correctness requirement are quietly pulling in opposite directions the way
+they were here.
+
+## Go/no-go on Module 03 (final)
+
+**Go.** The fixture (post three DDD cycles) and test suite (post this
+fourth DDD cycle, its own doubt-driven-development pass) are real and
+internally consistent: a correct attempt passes all 6 tests stably across
+repeated runs, a real, honest wrong attempt fails 3 of 6 for an understood,
+verified-not-flaky reason - a materially stronger discrimination profile
+than the 1-of-5 this retro's own dry run originally recorded, because the
+safety check itself is now an absolute one rather than an interval-overlap
+approximation. Every finding this module's combined dry-run-and-DDD process
+surfaced (three fixture-design cycles, one dry-run pass, one test-suite DDD
+cycle) is fixed and documented, not glossed over - including two cases,
+named explicitly above, where a fix from one pass left a real gap for the
+next pass to find, exactly the pattern this project's own precedent (Module
+02's cycle 2 finding gaps in cycle 1's fixes) predicts will keep happening
+and is not, on its own, a reason to distrust the process.

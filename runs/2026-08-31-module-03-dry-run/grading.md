@@ -104,3 +104,98 @@ this project's own private-implementation history of a `term_at` vs
 every plausible bug - only one of five tests caught the one bug actually
 injected here, and `retro.md` names this as a real, current gap rather than
 glossing over it.
+
+## Addendum: a doubt-driven-development pass on the test suite itself
+
+Everything above was the dry run's own record, written and trusted before a fresh
+adversarial reviewer ever looked at the test suite itself - a real process gap, given
+this project's own established practice of not treating a dry run's two-attempt
+discrimination as sufficient on its own. A single-model review, given the full test
+file and its governing contract as its artifact, found six real, confirmed issues -
+including one that recurred in the *same* test the original dry run's own process had
+already found a bug in, one assertion further downstream:
+
+**`assert_at_most_one_leader_per_term` checked a strictly weaker property than its own
+name.** It tracked "open" leadership intervals, clearing a node from a term's set the
+moment it transitioned away - so two nodes recording `Leader@5` sequentially (the
+first stepping down before the second is recorded) were invisible to it, even though
+that is a real, absolute Raft safety violation regardless of overlap. This is exactly
+the failure mode a missing one-vote-per-term restriction produces. Fixed to an
+absolute per-term check: the set of nodes that *ever* recorded `Leader` for a term
+must never exceed one, full stop.
+
+**The partition test's own liveness assertion could never fail.** The original dry
+run already found and fixed this test's core scenario being vacuous once (isolating a
+fixed node id instead of the actual leader). This cycle found the *fix's own
+assertion* was still vacuous, for a different reason: `assert_a_leader_was_elected`
+checks the *entire* merged history for any `Leader` event at all - which the
+pre-partition leader itself already satisfies, before the partition is even applied.
+Nothing in the test required a *new* leader, in a *higher* term, on a *different*
+node, to emerge afterward - the property the test's own doc comment claims to check.
+Fixed by tracking the isolated node's own last known term and requiring a leader
+transition elsewhere with a strictly higher term.
+
+**Contract requirement "election-timeout jitter re-randomizes per attempt" had zero
+test coverage.** Worse: `RaftNode`'s `rng: DeterministicRng` field derives `Copy`
+specifically so it *can* be copied out of `&self`/`&Arc<Self>` without needing
+interior mutability - but this makes the exact bug ("copy `self.rng` fresh inside
+`start_election` every time, discarding the advanced state, so every attempt draws
+the identical timeout") the path of least resistance for a learner to write by
+accident, and none of the original five tests would have caught it: the lowest-seeded
+node would just win every election, every time, indistinguishably from correct
+behavior. Added `a_split_vote_still_elects_a_leader_eventually` (30 seeds, a 4-node
+cluster so an even split is topologically possible) as the closest a black-box event
+log can get to enforcing this - it cannot prove re-randomization occurred, only that a
+genuine repeated-split-vote deadlock would eventually surface as a bounded-window
+liveness failure across enough seeds if it didn't.
+
+**The determinism test only ever exercised one hardcoded seed**, skipped the suite's
+other safety assertions on both runs, and never checked that *different* seeds
+produce *different* outcomes - only that identical seeds produce identical ones. Fixed
+to loop over the full seed set (running every assertion each time) and added an
+explicit cross-seed distinctness check.
+
+**Background-task panics were silently swallowed.** `RaftNode::start()`'s own doc
+comment promises the returned `JoinHandle`s let the harness "detect a panicked
+background task instead of silently reading 'no leader elected'" - the harness
+captured them as `let _handles = node.start();` and never touched them again. Without
+`tokio_unstable` (confirmed absent from this repo), a panicked spawned task doesn't
+crash the runtime; a node whose only background task panicked would fail silently,
+misdiagnosed as "too slow" rather than "crashed." Fixed to spawn a watcher per handle
+that records any unexpected completion or panic, with a new assertion checking that
+collector is empty.
+
+**Two doc-comment claims about `turmoil`'s partition behavior were still overbroad**
+even after the original dry run's own correction. That correction established a fresh
+`connect()` to an already-partitioned host fails fast (true, confirmed empirically).
+But it then claimed the whole held-lock-across-an-outbound-call anti-pattern "isn't
+forceable from this test" - overstated: an *already-established* connection, with a
+reply silently dropped mid-flight by the same partition, still hangs for real, since
+neither `call_append_entries` nor `serve_one_rpc` has a timeout. Corrected both
+`node.rs` and `timer.rs`'s doc comments to state the narrower, accurate claim.
+
+Smaller harness bugs fixed the same pass: the accept loop treated any `listener.accept()`
+error as "this node is done" (`return Ok(())`) instead of propagating it; a failed
+`sim.run()` discarded the transition history that would have been the actual
+diagnostic, and its panic message named "a panic above" when the dominant failure mode
+(an unmet liveness condition) never panics anywhere; `election_succeeds_under_injected_latency`'s
+chosen latency band barely differed from `turmoil`'s own ambient default already present
+in every other test, making it close to a duplicate of the plain no-fault test; a
+`Sim`/receiver drop-order hazard (currently inert, but one `tokio` internals change
+away from a real one).
+
+All fixes re-verified end to end against the existing dry run: `attempt-good` passes
+all 6 tests (one more than before - the new split-vote stress test), stable across
+repeated runs; `attempt-naive` (the same single deliberate bug: forgot Figure 2's
+one-vote-per-term restriction) now fails 3 of 6, up from 1 of 5 - the strengthened
+absolute safety check now catches the bug directly, in the no-fault and
+injected-latency tests too, rather than needing the partition scenario's specific
+interaction to surface it as a liveness symptom.
+
+**What this addendum is evidence of:** a dry run's own two-attempt discrimination
+check is real signal but not sufficient on its own for the test suite any more than
+for the fixture it tests - this project's own established finding for Module 02,
+recurring here in a new shape. Notably, one of this cycle's findings was a bug in the
+*previous* cycle's own fix (the partition test's liveness check, one assertion past
+where the earlier fix landed) - a fresh reviewer catches this precisely because it
+never saw the reasoning behind the first fix, only the artifact the fix produced.
