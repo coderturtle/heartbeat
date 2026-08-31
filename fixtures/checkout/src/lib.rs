@@ -3,4 +3,5 @@
 //! design and the module-by-module build-out.
 
 pub mod checkout;
+pub mod raft;
 pub mod rpc;
