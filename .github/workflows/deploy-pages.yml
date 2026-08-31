@@ -8,6 +8,13 @@ name: Deploy build log to GitHub Pages
 # site is ready to be public, add a `push: branches: [main]` trigger scoped to
 # site/**, docs/build-log/**, and this file (see borrow-native's
 # .github/workflows/deploy-pages.yml for the post-Human-Gate shape).
+#
+# Custom domain cutover (heartbeat.coderturtle.io, agentic-infra-lab's
+# github-pages-dns pattern, onboarded as the sixth consumer) landed in this
+# same commit, ahead of DNS actually going live - do NOT run workflow_dispatch
+# until docs/next-actions.md's DNS/domain-verification/Pages-enablement steps
+# are all confirmed done, or this deploy will publish a CNAME file GitHub
+# can't yet resolve.
 on:
   workflow_dispatch: {}
 
@@ -42,11 +49,12 @@ jobs:
         run: npm run build
         working-directory: site
 
-      # No custom domain yet (that's a later, human-gated decision, same as
-      # borrow-native's own CNAME PR came after its initial scaffold). Pages
-      # enablement itself is also a one-time, human-run step (GITHUB_TOKEN
-      # cannot enable Pages - see agentic-infra-lab's interpreter-notes.md),
-      # not something this workflow does.
+      # Custom domain: heartbeat.coderturtle.io, via agentic-infra-lab's
+      # github-pages-dns pattern (Route53 CNAME + TXT verification).
+      # site/public/CNAME declares the domain; Pages enablement and the
+      # custom-domain setting are one-time, human-run `gh api` steps
+      # (GITHUB_TOKEN cannot do either - see agentic-infra-lab's
+      # interpreter-notes.md), not something this workflow does.
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
