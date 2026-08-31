@@ -15,22 +15,23 @@
 //! design will not compile once spawned this way. Nothing in the test suite
 //! inspects your internal structure beyond that; it only observes behavior.
 //!
-//! **A trap that's real in production, even though this simulated harness
-//! can't force it:** `transport::call_request_vote`/`call_append_entries`,
-//! and `connector.connect(..)` itself, have no built-in timeout,
-//! deliberately - wrap a call in `tokio::time::timeout(..)` yourself when you
-//! don't want one slow peer to block your own progress. Holding your state's
-//! lock across an outbound call is a real anti-pattern in any concurrent
-//! Rust service (it starves every inbound handler that needs the same lock
-//! for as long as the call takes), but `turmoil`'s own `partition` fails a
-//! *new* `connect(..)` attempt to an already-partitioned host immediately
+//! **A real trap, forceable a specific way, not the way you'd first guess:**
+//! `transport::call_request_vote`/`call_append_entries`, and
+//! `connector.connect(..)` itself, have no built-in timeout, deliberately -
+//! wrap a call in `tokio::time::timeout(..)` yourself when you don't want
+//! one slow peer to block your own progress. Holding your state's lock
+//! across an outbound call is a real anti-pattern in any concurrent Rust
+//! service (it starves every inbound handler that needs the same lock for
+//! as long as the call takes). `turmoil`'s own `partition` fails a *new*
+//! `connect(..)` attempt to an already-partitioned host immediately
 //! (confirmed empirically against this crate's pinned `turmoil` version -
-//! it does not hang), so this module's own test suite cannot force that
-//! specific failure mode into a visible liveness violation the way an
-//! unbounded real-world TCP connect to an unreachable host eventually would.
-//! Still worth doing correctly - a slow *established* connection, or a
-//! future turmoil version modeling partition differently, would expose the
-//! same bug - just not something this module's own gate can catch for you.
+//! it does not hang) - so a partition firing *before* you dial a peer is not
+//! what exposes this bug here. An *already-established* connection is
+//! different: if a partition fires while your `call_append_entries` is
+//! waiting on a reply that's now silently dropped, that read hangs for real,
+//! since nothing in the provided transport times it out. Holding your lock
+//! across that specific window is what this module's own liveness tests
+//! can - and do - catch.
 //! What the test suite *does* verify under partition: a majority of the
 //! *other* nodes must still elect a leader within a bounded window,
 //! regardless of what an isolated node believes about its own leadership.

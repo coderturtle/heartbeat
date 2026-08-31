@@ -4,13 +4,14 @@
 //! would draw the identical timeout and a split vote could repeat forever.
 //!
 //! Timing constants are generous relative to `turmoil`'s realistic simulated
-//! latency (a `RequestVote`/`AppendEntries` round trip opens a fresh
-//! connection per call in this module's own provided transport - a real
-//! handshake-plus-round-trip cost, not free, even in simulated time) so that
-//! correctly implementing Figure 2 doesn't also require discovering
-//! connection-reuse-for-efficiency just to survive the module's own clock.
-//! Simulated time is free to spend generously; there's no wall-clock cost to
-//! these numbers being larger than a production Raft deployment would use.
+//! latency: `serve_one_rpc` reads exactly one frame, writes one reply, and
+//! returns - every `RequestVote`/`AppendEntries` round trip opens a fresh
+//! connection against this module's own provided transport, a real
+//! handshake-plus-round-trip cost, not free even in simulated time, and
+//! connection reuse isn't an available optimization to reach for here (the
+//! harness's own accept loop doesn't support it). Simulated time is free to
+//! spend generously; there's no wall-clock cost to these numbers being
+//! larger than a production Raft deployment would use.
 
 use std::time::Duration;
 
